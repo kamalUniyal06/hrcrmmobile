@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, radius, type } from "../../theme";
 import { Button, Notice, Screen } from "../../components/ui";
@@ -14,6 +15,7 @@ export default function LoginScreen() {
   const notice = useAuthStore((state) => state.notice);
   const clearNotice = useAuthStore((state) => state.clearNotice);
   const missing = missingConfig();
+  const insets = useSafeAreaInsets();
 
   const handleSession = async (data) => {
     try {
@@ -26,8 +28,8 @@ export default function LoginScreen() {
   };
 
   return (
-    <Screen contentStyle={styles.content} edges={["top", "bottom"]}>
-      <View style={styles.hero}>
+    <Screen contentStyle={styles.content} edges={["bottom"]}>
+      <View style={[styles.hero, { paddingTop: insets.top + 40 }]}>
         <Image source={require("../../../assets/icon.png")} style={styles.logo} />
         <Text style={styles.brand}>HRCRM</Text>
         <Text style={styles.tagline}>The Future of Human Resources — Powered by AI.</Text>
