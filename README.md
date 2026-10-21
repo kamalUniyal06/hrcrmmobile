@@ -20,7 +20,9 @@ Requirements: Node 22+, JDK 17, Android SDK with platform 37, build-tools 37.0.0
 npm install
 cp .env.example .env      # fill in the keys below
 npm run start:fresh       # Metro, with a cache reset so .env is picked up
-npm run android           # builds and installs the debug app on the running emulator / device
+npm run android           # builds and installs the debug app (needs JDK + SDK on PATH)
+.\scripts\run-android.ps1 # Windows: same, but sets JAVA_HOME / ANDROID_HOME / PATH itself and builds only the connected device's ABI
+.scriptsun-android.ps1  # Windows: same, but sets JAVA_HOME / ANDROID_HOME / PATH itself and builds only the connected device ABI
 ```
 
 `.env` needs the same values the web app uses in its `.env`:
