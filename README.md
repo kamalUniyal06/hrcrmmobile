@@ -37,6 +37,17 @@ Values are inlined at bundle time by `react-native-dotenv`; after editing `.env`
 
 iOS: `cd ios && pod install`, then `npm run ios` (requires macOS). Add the Ionicons font to `Info.plist` with `npx rnvi-update-plist package.json ios/HrcrmMobile/Info.plist`.
 
+## Verifying without a device
+
+```bash
+npm run lint   # ESLint (React Native config)
+npm test       # Jest: utils, API contracts, session/token logic, native Google fallback,
+               #       route-name consistency, and render smoke tests for every screen
+npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output /tmp/index.bundle
+```
+
+The Jest run mocks the Smart Gateway (`src/services/api`), AsyncStorage, WebView, Google Sign-In, the document picker and the icon font (see `__mocks__/`), so it exercises the real screens, stores and API modules against canned CRM records.
+
 ## How login works
 
 The web app signs in with Google / Microsoft through `app.hrcrm.ai/public/index.php?controller=auth&action=googleLogin` and keeps a `PHPSESSID` cookie.

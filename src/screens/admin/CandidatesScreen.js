@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Linking, Text, View } from "react-native";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { colors, type } from "../../theme";
+import { type } from "../../theme";
 import { Button, Card, Chip, EmptyState, ErrorState, Field, KeyValue, ListRow, LoadingState, PageHeader, Row, Screen, SectionTitle, SegmentedControl } from "../../components/ui";
 import { candidateName, candidatePhase, candidateStage, candidateStatus, fetchCandidateInterviews, fetchCandidatePage, fetchCandidateRecord, roundName } from "../../api/admin.api";
 import { formatDate, formatDateTime } from "../../utils/dates";

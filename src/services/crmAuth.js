@@ -81,15 +81,15 @@ export async function refreshSession() {
   let nativeError = null;
   try {
     return applyMeResponse(await fetchMeNative());
-  } catch (error) {
-    nativeError = error;
+  } catch (nativeFailure) {
+    nativeError = nativeFailure;
   }
 
   if (bridgeRefresher) {
     try {
       return applyMeResponse(await bridgeRefresher());
-    } catch (error) {
-      nativeError = error.status ? error : nativeError;
+    } catch (bridgeFailure) {
+      nativeError = bridgeFailure.status ? bridgeFailure : nativeError;
     }
   }
 

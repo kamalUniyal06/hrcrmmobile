@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, type } from "../theme";
@@ -15,10 +15,10 @@ export default function TodayAttendanceCard({ onAlertsRequired }) {
   const limits = useAttendanceLimits();
   const mark = useMarkActivity();
   const pendingAlerts = usePendingAlerts();
-  const [now, setNow] = useState(Date.now());
+  const [, tick] = useState(0); // re-renders once a second so the timers advance
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const timer = setInterval(() => tick((value) => value + 1), 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -32,7 +32,7 @@ export default function TodayAttendanceCard({ onAlertsRequired }) {
   const breakDone = Boolean(lunchIn && lunchOut);
 
   // Activity stamps are IST wall-clock values stored as UTC, so "now" uses the same convention.
-  const nowStamp = useMemo(() => nowStampInIndia(), [now]);
+  const nowStamp = nowStampInIndia();
   const worked = login ? Math.max(0, Math.floor(((logout ? logout.stamp : nowStamp) - login.stamp) / 1000)) : 0;
   const breakSeconds = lunchIn ? Math.max(0, Math.floor(((lunchOut ? lunchOut.stamp : nowStamp) - lunchIn.stamp) / 1000)) : 0;
   const breakOver = onBreak && breakSeconds > limits.lunchOutMinutes * 60;

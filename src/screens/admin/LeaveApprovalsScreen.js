@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { Alert, Linking, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { colors, type } from "../../theme";
+import { type } from "../../theme";
 import { Button, Card, Chip, EmptyState, ErrorState, Field, KeyValue, ListRow, LoadingState, PageHeader, Row, Screen, SegmentedControl } from "../../components/ui";
 import { getAllLeaves, getLeaveDocuments, leaveStatusOf, updateLeaveStatus } from "../../api/leaves.api";
 import { useEmployeesDirectory } from "../../hooks/queries";
 import { toast } from "../../store/toastStore";
-import { calendarDateKey, formatDate, timeAgo } from "../../utils/dates";
+import { formatDate, timeAgo } from "../../utils/dates";
 import { errorMessage, fullName, lower, plainText } from "../../utils/records";
 
 const STATUS_TONE = { Applied: "attention", Accepted: "success", Rejected: "closed" };

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { colors, type } from "../../theme";
-import { Button, Card, Chip, EmptyState, ErrorState, Field, IconButton, LoadingState, Notice, Row, Screen, SectionTitle } from "../../components/ui";
+import { Button, Card, Chip, EmptyState, ErrorState, Field, IconButton, LoadingState, Row, Screen, SectionTitle } from "../../components/ui";
 import { createSystemAlert, deleteSystemAlert, fetchSystemAlertResponses } from "../../api/systemAlerts.api";
 import { toast } from "../../store/toastStore";
 import { formatDate } from "../../utils/dates";

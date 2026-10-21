@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
-import { colors, type } from "../../theme";
+import { type } from "../../theme";
 import { Card, Chip, ListRow, PageHeader, Row, Screen, SectionTitle, SegmentedControl, StatTile } from "../../components/ui";
 import TodayAttendanceCard from "../../components/TodayAttendanceCard";
 import { AlertsRequiredSheet, PendingAlertsCard } from "../../components/AlertsPrompt";
@@ -146,4 +146,3 @@ export function greeting() {
   return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 }
 
-const styles = StyleSheet.create({});

@@ -101,7 +101,7 @@ export default function ApplyLeaveScreen({ navigation }) {
     <Screen>
       <Text style={type.small}>Weekends and public holidays are not counted as leave days.</Text>
 
-      <SelectField label="Leave type" value={form.type} onChange={(type) => setForm({ ...form, type })} options={LEAVE_TYPES} placeholder="Choose a reason" />
+      <SelectField label="Leave type" value={form.type} onChange={(leaveType) => setForm({ ...form, type: leaveType })} options={LEAVE_TYPES} placeholder="Choose a reason" />
       {form.type === "Other Reason" ? (
         <Field label="Reason" value={form.otherReason} onChangeText={(otherReason) => setForm({ ...form, otherReason })} placeholder="Tell HR what this leave is for" multiline />
       ) : null}

@@ -1,15 +1,15 @@
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { colors, type } from "../../theme";
+import { type } from "../../theme";
 import { Card, Chip, ListRow, PageHeader, Row, Screen, SectionTitle, StatTile } from "../../components/ui";
 import TodayAttendanceCard from "../../components/TodayAttendanceCard";
 import { AlertsRequiredSheet, PendingAlertsCard } from "../../components/AlertsPrompt";
-import { useAttendanceLimits, useEmail, useEmployeesDirectory, usePublicHolidays } from "../../hooks/queries";
+import { useAttendanceLimits, useEmail, useEmployeesDirectory } from "../../hooks/queries";
 import { getOrgActivityForDay } from "../../api/dailyActivity.api";
 import { getAllLeaves, leaveStatusOf } from "../../api/leaves.api";
 import { fetchCandidatePage, fetchInterviews, fetchResignations, isExEmployee, boardState, uniqueInterviews, hasOutcome } from "../../api/admin.api";
-import { daySummary, groupActivityByDay } from "../../utils/attendance";
+import { daySummary } from "../../utils/attendance";
 import { calendarDateKey, formatClock, todayKey } from "../../utils/dates";
 import { clean, fullName, lower } from "../../utils/records";
 import { greeting } from "../employee/EmployeeHomeScreen";
@@ -27,7 +27,6 @@ export default function AdminHomeScreen({ navigation }) {
   const candidates = useQuery({ queryKey: ["candidates", "list", "page", 1], queryFn: () => fetchCandidatePage({ page: 1 }), staleTime: 5 * 60 * 1000 });
   const interviews = useQuery({ queryKey: ["interviews"], queryFn: fetchInterviews, staleTime: 5 * 60 * 1000 });
   const resignations = useQuery({ queryKey: ["resignations", "offboarding"], queryFn: fetchResignations, staleTime: 5 * 60 * 1000 });
-  const holidays = usePublicHolidays();
 
   const roster = useMemo(() => (employees.data || []).filter((employee) => !isExEmployee(employee)), [employees.data]);
 

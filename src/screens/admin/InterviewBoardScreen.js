@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { colors, type } from "../../theme";
+import { type } from "../../theme";
 import { Button, Card, Chip, EmptyState, ErrorState, Field, LoadingState, Notice, Row, Screen, SegmentedControl, Sheet } from "../../components/ui";
 import { boardState, createInterview, fetchInterviews, groupInterviews, hasOutcome, roundName, uniqueInterviews, updateInterview, PIPELINE_ROUNDS } from "../../api/admin.api";
 import { toast } from "../../store/toastStore";

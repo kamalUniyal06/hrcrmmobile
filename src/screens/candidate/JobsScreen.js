@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { colors, type } from "../../theme";
+import { type } from "../../theme";
 import { Button, Card, Chip, EmptyState, ErrorState, Field, KeyValue, ListRow, LoadingState, Notice, PageHeader, Row, Screen } from "../../components/ui";
 import { useCandidateProfile } from "../../hooks/queries";
 import { applicationStage, applyToJob, experienceRange, fetchJobApplications, fetchJobPostings, jobIsOpen, jobLocation, jobTitle, jobType, salaryRange } from "../../api/candidate.api";

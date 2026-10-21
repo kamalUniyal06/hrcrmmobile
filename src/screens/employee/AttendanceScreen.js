@@ -51,24 +51,24 @@ export default function AttendanceScreen({ route }) {
   const holidays = usePublicHolidays();
 
   const { markers, byDay, leaveDays, holidayMap, counts } = useMemo(() => {
-    const byDay = groupActivityByDay(activity.data || []);
-    const leaveDays = leaveDaysOf(leaves.data || []);
-    const holidayMap = holidayMapOf(holidays.data || []);
-    const markers = {};
-    const counts = { present: 0, late: 0, leave: 0, absent: 0 };
+    const dayMap = groupActivityByDay(activity.data || []);
+    const leaveSet = leaveDaysOf(leaves.data || []);
+    const holidayNames = holidayMapOf(holidays.data || []);
+    const cellMarkers = {};
+    const totals = { present: 0, late: 0, leave: 0, absent: 0 };
     const days = new Date(cursor.year, cursor.month + 1, 0).getDate();
     for (let day = 1; day <= days; day += 1) {
       const key = dateKey(new Date(cursor.year, cursor.month, day));
-      const summary = daySummary(byDay[key], key, today, leaveDays.has(key), limits.lateAfter);
-      if (summary.status === "onTime") { markers[key] = { tone: "present" }; counts.present += 1; }
-      else if (summary.status === "late") { markers[key] = { tone: "late" }; counts.late += 1; }
-      else if (summary.status === "leave") { markers[key] = { tone: "leave" }; counts.leave += 1; }
-      else if (holidayMap[key]) markers[key] = { tone: "holiday", label: holidayMap[key] };
-      else if (isWeekend(key)) markers[key] = { tone: "weekend" };
-      else if (summary.status === "missing" && key < today) { markers[key] = { tone: "absent" }; counts.absent += 1; }
-      else if (summary.status === "incomplete") markers[key] = { tone: "incomplete" };
+      const summary = daySummary(dayMap[key], key, today, leaveSet.has(key), limits.lateAfter);
+      if (summary.status === "onTime") { cellMarkers[key] = { tone: "present" }; totals.present += 1; }
+      else if (summary.status === "late") { cellMarkers[key] = { tone: "late" }; totals.late += 1; }
+      else if (summary.status === "leave") { cellMarkers[key] = { tone: "leave" }; totals.leave += 1; }
+      else if (holidayNames[key]) cellMarkers[key] = { tone: "holiday", label: holidayNames[key] };
+      else if (isWeekend(key)) cellMarkers[key] = { tone: "weekend" };
+      else if (summary.status === "missing" && key < today) { cellMarkers[key] = { tone: "absent" }; totals.absent += 1; }
+      else if (summary.status === "incomplete") cellMarkers[key] = { tone: "incomplete" };
     }
-    return { markers, byDay, leaveDays, holidayMap, counts };
+    return { markers: cellMarkers, byDay: dayMap, leaveDays: leaveSet, holidayMap: holidayNames, counts: totals };
   }, [activity.data, cursor, holidays.data, leaves.data, limits.lateAfter, today]);
 
   const move = (delta) =>
