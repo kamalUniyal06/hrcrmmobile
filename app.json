@@ -1,40 +1,4 @@
 {
-  "expo": {
-    "name": "HRCRM",
-    "slug": "hrcrm-mobile",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "scheme": "hrcrm",
-    "userInterfaceStyle": "light",
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "ai.hrcrm.mobile"
-    },
-    "android": {
-      "package": "ai.hrcrm.mobile",
-      "adaptiveIcon": {
-        "backgroundColor": "#0B1310",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      "expo-secure-store",
-      "expo-font",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#0B1310",
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain"
-        }
-      ]
-    ]
-  }
+  "name": "HrcrmMobile",
+  "displayName": "HRCRM"
 }

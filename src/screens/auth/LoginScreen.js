@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, type } from "../../theme";
 import { Button, Notice, Screen } from "../../components/ui";
 import AuthWebView from "../../components/AuthWebView";
 import { useAuthStore } from "../../store/authStore";
 import { toast } from "../../store/toastStore";
 import { missingConfig } from "../../config";
+import { nativeGoogleAvailable, signInWithGoogleNative } from "../../services/googleAuth";
 
 export default function LoginScreen() {
   const [provider, setProvider] = useState(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const signInWithMe = useAuthStore((state) => state.signInWithMe);
   const notice = useAuthStore((state) => state.notice);
   const clearNotice = useAuthStore((state) => state.clearNotice);
@@ -24,6 +26,23 @@ export default function LoginScreen() {
       toast.success(`Signed in as ${data?.user?.email || "your account"}`);
     } catch (error) {
       toast.error(error.message || "Could not complete sign in.");
+    }
+  };
+
+  // Native Google account dialog first; the web login takes over when it cannot be used.
+  const continueWithGoogle = async () => {
+    if (!nativeGoogleAvailable()) {
+      setProvider("google");
+      return;
+    }
+    setGoogleBusy(true);
+    try {
+      const result = await signInWithGoogleNative();
+      if (result.status === "ok") await handleSession(result.data);
+      else if (result.status === "error") toast.error(result.reason);
+      else if (result.status === "fallback") setProvider("google");
+    } finally {
+      setGoogleBusy(false);
     }
   };
 
@@ -41,10 +60,10 @@ export default function LoginScreen() {
 
         {notice ? <Notice tone="attention" icon="information-circle-outline" message={notice} action="Dismiss" onAction={clearNotice} /> : null}
         {missing.length ? (
-          <Notice tone="closed" icon="key-outline" title="App keys missing" message={`Add ${missing.join(" and ")} to the .env file, then reload the app.`} />
+          <Notice tone="closed" icon="key-outline" title="App keys missing" message={`Add ${missing.join(" and ")} to the .env file, then restart Metro with npm run start:fresh.`} />
         ) : null}
 
-        <Button title="Continue with Google" icon="logo-google" variant="outline" full onPress={() => setProvider("google")} style={{ minHeight: 50 }} />
+        <Button title="Continue with Google" icon="logo-google" variant="outline" full loading={googleBusy} onPress={continueWithGoogle} style={{ minHeight: 50 }} />
         <Button title="Continue with Microsoft" icon="logo-microsoft" variant="dark" full onPress={() => setProvider("microsoft")} style={{ minHeight: 50 }} />
 
         <View style={styles.footerRow}>
@@ -66,7 +85,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   content: { flexGrow: 1, padding: 0, gap: 0 },
-  hero: { backgroundColor: colors.sidebar, paddingTop: 48, paddingBottom: 56, paddingHorizontal: 24, alignItems: "center", gap: 10, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+  hero: { backgroundColor: colors.sidebar, paddingBottom: 56, paddingHorizontal: 24, alignItems: "center", gap: 10, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
   logo: { width: 64, height: 64, borderRadius: 16 },
   brand: { color: "#fff", fontSize: 28, fontWeight: "700", letterSpacing: -0.5 },
   tagline: { color: colors.lime, fontSize: 14, textAlign: "center" },

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, type } from "../../theme";
 import { Button, Card, Chip, ErrorState, ListRow, LoadingState, Notice, PageHeader, Row, Screen, SectionTitle } from "../../components/ui";
 import { useCandidateProfile, useEmail } from "../../hooks/queries";

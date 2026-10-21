@@ -4,14 +4,16 @@
  * The auth backend issues a short-lived RS256 JWT (`crm_access_token`) from
  * `?controller=auth&action=me`, authenticated by the PHPSESSID cookie set during
  * Google / Microsoft login. The token is cached in memory until 30 seconds before
- * expiry and is never written to storage or logs.
+ * expiry and mirrored to AsyncStorage so a relaunch can keep working until it expires.
  *
- * On a phone the login happens inside a WebView, so the session cookie lives in
- * the WebView cookie store. Refreshing works in two steps:
+ * Refresh works in two steps:
  *   1. native fetch with cookies (Android shares the WebView cookie jar with fetch);
  *   2. if that fails, a hidden WebView (`SessionBridge`) loads `me` and posts the JSON back.
  */
 import { AUTH_URL } from "../config";
+import { readJson, remove, writeJson } from "./storage";
+
+const TOKEN_KEY = "hrcrm.crmToken";
 
 let cachedToken = null;
 let expiresAt = 0;
@@ -32,6 +34,17 @@ export function onSessionExpired(fn) {
   sessionExpiredHandler = fn;
 }
 
+/** Load a still-valid token saved by a previous run. */
+export async function restoreCrmToken() {
+  const saved = await readJson(TOKEN_KEY);
+  if (saved?.token && Number(saved.expiresAt) > Date.now() + 5000) {
+    cachedToken = saved.token;
+    expiresAt = Number(saved.expiresAt);
+    return true;
+  }
+  return false;
+}
+
 /** Store the token carried by a `me` response and return that response. */
 export function applyMeResponse(data) {
   const token = data?.crm_access_token;
@@ -43,6 +56,7 @@ export function applyMeResponse(data) {
   const expiresIn = Number(data?.crm_access_token_expires_in) || 600;
   cachedToken = token;
   expiresAt = Date.now() + Math.max(expiresIn - 30, 30) * 1000;
+  writeJson(TOKEN_KEY, { token, expiresAt });
   return data;
 }
 
@@ -80,14 +94,11 @@ export async function refreshSession() {
   }
 
   const status = nativeError?.status;
-  const error = new Error(
-    status === 401 || status === 403 || nativeError?.code === "NO_TOKEN"
-      ? "Your session has expired. Please sign in again."
-      : nativeError?.message || "Could not reach the HRCRM server.",
-  );
-  error.code = status === 401 || status === 403 || nativeError?.code === "NO_TOKEN" ? "SESSION_EXPIRED" : "NETWORK";
+  const expired = status === 401 || status === 403 || nativeError?.code === "NO_TOKEN";
+  const error = new Error(expired ? "Your session has expired. Please sign in again." : nativeError?.message || "Could not reach the HRCRM server.");
+  error.code = expired ? "SESSION_EXPIRED" : "NETWORK";
   error.status = status;
-  if (error.code === "SESSION_EXPIRED") {
+  if (expired) {
     clearCrmToken();
     sessionExpiredHandler?.(error);
   }
@@ -108,6 +119,7 @@ export async function getCrmToken() {
 export function clearCrmToken() {
   cachedToken = null;
   expiresAt = 0;
+  remove(TOKEN_KEY);
 }
 
 export function hasCrmToken() {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, type } from "../theme";
 import { Button, Card, Chip, Row } from "./ui";
 import { useAttendanceLimits, useDailyActivity, useMarkActivity, usePendingAlerts } from "../hooks/queries";

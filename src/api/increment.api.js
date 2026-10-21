@@ -1,6 +1,6 @@
 // Increment requests (web: components/employement/api/increment.api.js + incrementAdminData.js).
-import * as SecureStore from "expo-secure-store";
 import { gateway } from "../services/api";
+import { readString, remove, writeString } from "../services/storage";
 import { activeRecords, assertSuccess, clean, createdId, fetchAllPages } from "../utils/records";
 
 export const INCREMENT_MODULE = "hrc_increment";
@@ -12,27 +12,11 @@ const MONTHS_IN_YEAR = 12;
 
 const storageKey = (email) => `hrcrm.pendingIncrement.${clean(email).toLowerCase().replace(/[^a-z0-9]/g, "_") || "anonymous"}`;
 
-export const getRememberedIncrementId = async (email) => {
-  try {
-    return (await SecureStore.getItemAsync(storageKey(email))) || "";
-  } catch {
-    return "";
-  }
-};
+export const getRememberedIncrementId = (email) => readString(storageKey(email));
 export const rememberIncrementId = async (email, id) => {
-  try {
-    if (id) await SecureStore.setItemAsync(storageKey(email), String(id));
-  } catch {
-    // The request still works without local memory.
-  }
+  if (id) await writeString(storageKey(email), id);
 };
-export const clearRememberedIncrement = async (email) => {
-  try {
-    await SecureStore.deleteItemAsync(storageKey(email));
-  } catch {
-    // Nothing else required.
-  }
-};
+export const clearRememberedIncrement = (email) => remove(storageKey(email));
 
 const latestSalaryFor = async (filters) => {
   const response = assertSuccess(

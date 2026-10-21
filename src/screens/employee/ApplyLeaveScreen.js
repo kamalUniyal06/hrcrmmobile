@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import * as DocumentPicker from "expo-document-picker";
-import { Ionicons } from "@expo/vector-icons";
+import { pick, types, isErrorWithCode, errorCodes } from "@react-native-documents/picker";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, type } from "../../theme";
 import { Button, Card, Field, Notice, Row, Screen, SelectField } from "../../components/ui";
 import MonthCalendar from "../../components/ui/MonthCalendar";
@@ -45,15 +45,21 @@ export default function ApplyLeaveScreen({ navigation }) {
   };
 
   const pickFile = async () => {
-    const result = await DocumentPicker.getDocumentAsync({ type: ["application/pdf", "image/*"], copyToCacheDirectory: true, multiple: false });
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if (asset.size && asset.size > MAX_FILE_SIZE) {
+    let file;
+    try {
+      // `import` mode copies the file into the app so the upload can read it later.
+      [file] = await pick({ type: [types.pdf, types.images], allowMultiSelection: false, mode: "import" });
+    } catch (err) {
+      if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) return;
+      setError(errorMessage(err, "Could not open the file picker."));
+      return;
+    }
+    if (file.size && file.size > MAX_FILE_SIZE) {
       setError("The file must be 10 MB or smaller.");
       return;
     }
     setError("");
-    setAttachment(asset);
+    setAttachment({ uri: file.uri, name: file.name || "attachment", mimeType: file.type || "application/octet-stream", size: file.size });
   };
 
   const mutation = useMutation({

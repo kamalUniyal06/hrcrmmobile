@@ -4,12 +4,16 @@
  * status: "booting" | "signedOut" | "signedIn"
  * user:     { email }
  * userInfo: { id, subject_type, stage, phase, status }   // status "admin" marks HR admins
+ *
+ * The user snapshot and the CRM JWT are mirrored to AsyncStorage so the app opens
+ * straight to the right tabs; the cookie session is re-checked in the background.
  */
 import { create } from "zustand";
-import * as SecureStore from "expo-secure-store";
 import { AUTH_URL } from "../config";
-import { applyMeResponse, clearCrmToken, onSessionExpired, refreshSession } from "../services/crmAuth";
+import { applyMeResponse, clearCrmToken, onSessionExpired, refreshSession, restoreCrmToken } from "../services/crmAuth";
 import { apiRequest } from "../services/api";
+import { readJson, remove, writeJson } from "../services/storage";
+import { signOutGoogleNative } from "../services/googleAuth";
 
 const SNAPSHOT_KEY = "hrcrm.session";
 
@@ -29,31 +33,6 @@ export function normalizeMe(data = {}) {
   };
 }
 
-async function saveSnapshot(snapshot) {
-  try {
-    await SecureStore.setItemAsync(SNAPSHOT_KEY, JSON.stringify(snapshot));
-  } catch {
-    // Storage is a convenience: the live session still works without it.
-  }
-}
-
-async function readSnapshot() {
-  try {
-    const raw = await SecureStore.getItemAsync(SNAPSHOT_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-async function clearSnapshot() {
-  try {
-    await SecureStore.deleteItemAsync(SNAPSHOT_KEY);
-  } catch {
-    // Nothing else to do.
-  }
-}
-
 export const useAuthStore = create((set, get) => ({
   status: "booting",
   user: {},
@@ -64,30 +43,36 @@ export const useAuthStore = create((set, get) => ({
   setBridgeReady: (ready) => set({ bridgeReady: ready }),
   clearNotice: () => set({ notice: null }),
 
-  /** Called with the parsed `me` JSON after the login WebView finishes. */
+  /** Called with the parsed `me` JSON after the login WebView or native Google dialog finishes. */
   signInWithMe: async (data) => {
     applyMeResponse(data);
     const snapshot = normalizeMe(data);
-    await saveSnapshot(snapshot);
+    await writeJson(SNAPSHOT_KEY, snapshot);
     set({ status: "signedIn", ...snapshot, notice: null });
   },
 
-  /** App start: restore the last user, then confirm the cookie session still works. */
+  /** App start: restore the last user and token, then confirm the cookie session still works. */
   bootstrap: async () => {
-    const snapshot = await readSnapshot();
-    if (snapshot) set({ ...snapshot });
+    const snapshot = await readJson(SNAPSHOT_KEY);
+    const tokenRestored = await restoreCrmToken();
+    if (snapshot?.user?.email && tokenRestored) {
+      // A valid JWT is enough to start; the refresh below only updates the snapshot.
+      set({ status: "signedIn", ...snapshot });
+    } else if (snapshot) {
+      set({ ...snapshot });
+    }
     try {
       const data = await refreshSession();
       const fresh = normalizeMe(data);
-      await saveSnapshot(fresh);
+      await writeJson(SNAPSHOT_KEY, fresh);
       set({ status: "signedIn", ...fresh, notice: null });
     } catch (error) {
+      if (get().status === "signedIn") return; // Already running on the restored token; expiry is handled later.
       if (error.code === "NETWORK" && snapshot?.user?.email) {
-        // Offline: keep the last known user so the app opens; requests will retry.
         set({ status: "signedIn", notice: "You appear to be offline. Showing the last known session." });
         return;
       }
-      await clearSnapshot();
+      await remove(SNAPSHOT_KEY);
       set({ status: "signedOut", user: {}, userInfo: emptyInfo, notice: snapshot ? "Your session expired. Please sign in again." : null });
     }
   },
@@ -100,7 +85,8 @@ export const useAuthStore = create((set, get) => ({
       // Clearing the local session is still correct when the server call fails.
     }
     clearCrmToken();
-    await clearSnapshot();
+    await remove(SNAPSHOT_KEY);
+    await signOutGoogleNative();
     set({ status: "signedOut", user: {}, userInfo: emptyInfo, notice: null });
   },
 
@@ -108,7 +94,7 @@ export const useAuthStore = create((set, get) => ({
   expire: async (message) => {
     if (get().status !== "signedIn") return;
     clearCrmToken();
-    await clearSnapshot();
+    await remove(SNAPSHOT_KEY);
     set({ status: "signedOut", user: {}, userInfo: emptyInfo, notice: message || "Your session expired. Please sign in again." });
   },
 }));

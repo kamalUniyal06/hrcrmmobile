@@ -1,6 +1,5 @@
 import { useEffect } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { StatusBar } from "expo-status-bar";
+import { ActivityIndicator, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./src/lib/queryClient";
@@ -34,7 +33,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <StatusBar style={status === "signedIn" ? "dark" : "light"} />
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle={status === "signedIn" ? "dark-content" : "light-content"}
+        />
         {status === "booting" ? <Splash /> : <RootNavigator />}
         {/* Always mounted: it carries the login cookies, so sessions restore on iOS too. */}
         <SessionBridge />
