@@ -24,5 +24,5 @@ try {
 }
 
 & adb reverse tcp:8081 tcp:8081 | Out-Null
-& adb shell am start -n ai.hrcrm.mobile/.MainActivity | Out-Null
+& adb shell am start -n ai.hrcrm.app/.MainActivity | Out-Null
 Write-Host "HRCRM launched. Metro must be running on port 8081."

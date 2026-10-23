@@ -51,7 +51,7 @@ export default function SystemAlertsScreen() {
           <Text style={type.heading}>New alert</Text>
           <Field label="Title" value={form.name} onChangeText={(name) => setForm({ ...form, name })} placeholder="e.g. Office closed on Friday" />
           <Field label="Message" value={form.description} onChangeText={(description) => setForm({ ...form, description })} placeholder="What do employees need to confirm?" multiline />
-          <Row>
+          <Row style={{ flexWrap: "wrap" }}>
             <Button title="Publish" icon="megaphone-outline" loading={create.isPending} disabled={!clean(form.name) || !clean(form.description)} onPress={() => create.mutate()} />
             <Button title="Cancel" variant="ghost" onPress={() => setComposing(false)} />
           </Row>
@@ -82,7 +82,7 @@ export default function SystemAlertsScreen() {
                   {!alert.unavailable ? <IconButton icon="trash-outline" color={colors.destructive} onPress={() => confirmDelete(alert)} label="Delete alert" /> : null}
                 </Row>
                 {alert.description ? <Text style={type.body}>{plainText(alert.description)}</Text> : null}
-                <Row>
+                <Row style={{ flexWrap: "wrap" }}>
                   <Chip label={`${yes} yes`} tone="success" small />
                   <Chip label={`${no} no`} tone="closed" small />
                   <Chip label={`${responses.length} responses`} tone="neutral" small />

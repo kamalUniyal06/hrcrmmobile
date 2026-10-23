@@ -77,13 +77,15 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "ai.hrcrm.mobile"
+    namespace "ai.hrcrm.app"
     defaultConfig {
-        applicationId "ai.hrcrm.mobile"
+        applicationId "ai.hrcrm.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        // react-native-app-auth: Microsoft sign-in returns to ai.hrcrm.app://oauth/redirect
+        manifestPlaceholders = [appAuthRedirectScheme: "ai.hrcrm.app"]
     }
     signingConfigs {
         debug {
@@ -92,18 +94,37 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        // Play Store upload key. The keystore (android/app/hrcrm-upload.keystore) and its
+        // passwords stay out of git: set HRCRM_UPLOAD_* in ~/.gradle/gradle.properties.
+        if (project.hasProperty('HRCRM_UPLOAD_STORE_FILE')) {
+            release {
+                storeFile file(HRCRM_UPLOAD_STORE_FILE)
+                storePassword HRCRM_UPLOAD_STORE_PASSWORD
+                keyAlias HRCRM_UPLOAD_KEY_ALIAS
+                keyPassword HRCRM_UPLOAD_KEY_PASSWORD
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Never ship with the debug key: Play rejects it. Without the upload key the
+            // release build fails below instead of silently falling back to debug signing.
+            signingConfig signingConfigs.findByName('release')
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
+    }
+}
+
+// Stop release builds (assembleRelease / bundleRelease) early when the upload key is missing.
+gradle.taskGraph.whenReady { graph ->
+    def buildsRelease = graph.allTasks.any { it.project == project && it.name ==~ /(assemble|bundle|package)Release.*/ }
+    if (buildsRelease && !project.hasProperty('HRCRM_UPLOAD_STORE_FILE')) {
+        throw new GradleException("Release signing key not configured. Add HRCRM_UPLOAD_STORE_FILE, HRCRM_UPLOAD_KEY_ALIAS, " +
+            "HRCRM_UPLOAD_STORE_PASSWORD and HRCRM_UPLOAD_KEY_PASSWORD to ~/.gradle/gradle.properties.")
     }
 }
 

@@ -122,7 +122,7 @@ export function CandidateDetailScreen({ route }) {
           (interviews.data || []).map((interview) => (
             <Card key={interview.id} style={{ gap: 2 }}>
               <Row style={{ justifyContent: "space-between" }}>
-                <Text style={type.subheading}>{roundName(interview)}</Text>
+                <Text style={[type.subheading, { flex: 1, minWidth: 0 }]} numberOfLines={2}>{roundName(interview)}</Text>
                 <Chip label={interview.interview_status || "Pending"} tone={/pass/i.test(interview.interview_status) ? "success" : /fail/i.test(interview.interview_status) ? "closed" : "attention"} small />
               </Row>
               <Text style={type.small}>{interview.interview_datetime ? formatDateTime(interview.interview_datetime) : "Not scheduled"}</Text>

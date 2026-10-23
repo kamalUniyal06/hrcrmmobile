@@ -56,7 +56,7 @@ export default function CandidateHomeScreen({ navigation }) {
       {next ? (
         <Card tone="progress">
           <Row style={{ justifyContent: "space-between" }}>
-            <Text style={[type.subheading, { color: colors.primary }]}>Next interview</Text>
+            <Text style={[type.subheading, { color: colors.primary, flex: 1, minWidth: 0 }]} numberOfLines={1}>Next interview</Text>
             <Chip label={timeUntil(next.date)} tone="lime" small />
           </Row>
           <Text style={type.heading}>{next.record.round}</Text>
@@ -116,6 +116,6 @@ const styles = StyleSheet.create({
   steps: { flexDirection: "row", gap: 6 },
   step: { flex: 1, alignItems: "center", gap: 6 },
   dot: { width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
-  dotText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  dotText: { color: "#fff", fontSize: 12, fontWeight: "600" },
   stepLabel: { color: "#fff", fontSize: 11, textAlign: "center", fontWeight: "500" },
 });

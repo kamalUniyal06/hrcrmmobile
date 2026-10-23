@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { type, colors } from "../theme";
-import { Button, Card, Notice, Row, Sheet } from "./ui";
+import { Button, Card, Row } from "./ui";
 import { useAnswerAlert, usePendingAlerts } from "../hooks/queries";
 import { plainText } from "../utils/records";
 import { formatDate } from "../utils/dates";
@@ -18,27 +18,6 @@ export function PendingAlertsCard() {
         <AlertItem key={alert.id} alert={alert} busy={answer.isPending && answer.variables?.alertId === alert.id} onAnswer={(value) => answer.mutate({ alertId: alert.id, answer: value })} />
       ))}
     </Card>
-  );
-}
-
-/** Bottom sheet shown when a clock-out is blocked by unanswered alerts. */
-export function AlertsRequiredSheet({ alerts, visible, onClose }) {
-  const answer = useAnswerAlert();
-  const pending = usePendingAlerts();
-  const remaining = (pending.data || alerts || []).filter((alert) => alerts?.some((item) => item.id === alert.id) || !alerts);
-  return (
-    <Sheet visible={visible} onClose={onClose} title="Respond before clocking out">
-      <View style={{ paddingHorizontal: 16, gap: 12, paddingTop: 4 }}>
-        <Notice tone="attention" icon="alert-circle-outline" message="Please give your response to each notice before you log out." />
-        {remaining.length ? (
-          remaining.map((alert) => (
-            <AlertItem key={alert.id} alert={alert} busy={answer.isPending && answer.variables?.alertId === alert.id} onAnswer={(value) => answer.mutate({ alertId: alert.id, answer: value })} />
-          ))
-        ) : (
-          <Notice tone="success" icon="checkmark-circle-outline" message="All responses saved. You can clock out now." action="Done" onAction={onClose} />
-        )}
-      </View>
-    </Sheet>
   );
 }
 

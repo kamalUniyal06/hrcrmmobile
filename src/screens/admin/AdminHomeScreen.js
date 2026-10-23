@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type } from "../../theme";
 import { Card, Chip, ListRow, PageHeader, Row, Screen, SectionTitle, StatTile } from "../../components/ui";
 import TodayAttendanceCard from "../../components/TodayAttendanceCard";
-import { AlertsRequiredSheet, PendingAlertsCard } from "../../components/AlertsPrompt";
+import { PendingAlertsCard } from "../../components/AlertsPrompt";
 import { useAttendanceLimits, useEmail, useEmployeesDirectory } from "../../hooks/queries";
 import { getOrgActivityForDay } from "../../api/dailyActivity.api";
 import { getAllLeaves, leaveStatusOf } from "../../api/leaves.api";
@@ -17,7 +17,6 @@ import { greeting } from "../employee/EmployeeHomeScreen";
 export default function AdminHomeScreen({ navigation }) {
   const email = useEmail();
   const limits = useAttendanceLimits();
-  const [alertsRequired, setAlertsRequired] = useState(null);
   const today = todayKey();
   const queryClient = useQueryClient();
 
@@ -82,7 +81,7 @@ export default function AdminHomeScreen({ navigation }) {
       <PageHeader eyebrow={greeting()} title="HR dashboard" subtitle={email} right={<Chip label="Admin" tone="lime" />} />
 
       <PendingAlertsCard />
-      <TodayAttendanceCard onAlertsRequired={setAlertsRequired} />
+      <TodayAttendanceCard />
 
       <View style={{ gap: 10 }}>
         <SectionTitle title="Today across the team" hint={activity.isPending || employees.isPending ? "Loading…" : `${todayStats.total} active employees · avg check-in ${formatClock(todayStats.avgCheckIn)}`} />
@@ -96,7 +95,7 @@ export default function AdminHomeScreen({ navigation }) {
         </Row>
         <Card>
           <Row style={{ justifyContent: "space-between" }}>
-            <Text style={type.subheading}>{{ late: "Late today", missing: "Not checked in", leave: "On leave", present: "Present on time" }[peopleTab]}</Text>
+            <Text style={[type.subheading, { flex: 1, minWidth: 0 }]} numberOfLines={1}>{{ late: "Late today", missing: "Not checked in", leave: "On leave", present: "Present on time" }[peopleTab]}</Text>
             <Text style={type.small}>{people.length}</Text>
           </Row>
           {people.length === 0 ? (
@@ -113,12 +112,10 @@ export default function AdminHomeScreen({ navigation }) {
       <View style={{ gap: 10 }}>
         <SectionTitle title="Needs action" />
         <ListRow icon="calendar-outline" iconTone={pendingLeaves.length ? "attention" : "neutral"} title="Leave approvals" subtitle={pendingLeaves.length ? `${pendingLeaves.length} request${pendingLeaves.length === 1 ? "" : "s"} waiting` : "All caught up"} onPress={() => navigation.navigate("Approvals")} />
-        <ListRow icon="people-outline" iconTone={interviewSummary.due ? "attention" : "progress"} title="Interviews" subtitle={`${interviewSummary.due} awaiting decision · ${interviewSummary.upcoming} upcoming · ${interviewSummary.unscheduled} to schedule`} onPress={() => navigation.navigate("More", { screen: "InterviewBoard" })} />
+        <ListRow icon="people-outline" iconTone={interviewSummary.due ? "attention" : "progress"} title="Interviews" subtitle={`${interviewSummary.due} awaiting decision · ${interviewSummary.upcoming} upcoming · ${interviewSummary.unscheduled} to schedule`} onPress={() => navigation.navigate("Profile", { screen: "InterviewBoard" })} />
         <ListRow icon="person-add-outline" iconTone="progress" title="Candidates" subtitle={candidates.data ? `${candidates.data.total} in the pipeline` : "Loading…"} onPress={() => navigation.navigate("Candidates")} />
-        <ListRow icon="exit-outline" iconTone={openOffboarding ? "attention" : "neutral"} title="Offboarding" subtitle={openOffboarding ? `${openOffboarding} open case${openOffboarding === 1 ? "" : "s"}` : "No open cases"} onPress={() => navigation.navigate("More", { screen: "Offboarding" })} />
+        <ListRow icon="exit-outline" iconTone={openOffboarding ? "attention" : "neutral"} title="Offboarding" subtitle={openOffboarding ? `${openOffboarding} open case${openOffboarding === 1 ? "" : "s"}` : "No open cases"} onPress={() => navigation.navigate("Profile", { screen: "Offboarding" })} />
       </View>
-
-      <AlertsRequiredSheet alerts={alertsRequired} visible={Boolean(alertsRequired)} onClose={() => setAlertsRequired(null)} />
     </Screen>
   );
 }

@@ -5,6 +5,8 @@ import {
   EXPO_PUBLIC_FETCHGPC_X_API_KEY,
   EXPO_PUBLIC_RECRUITMENT_API_URL,
   GOOGLE_WEB_CLIENT_ID,
+  MICROSOFT_CLIENT_ID,
+  MICROSOFT_TENANT_ID,
 } from "@env";
 
 // Auth backend: Google / Microsoft login, session lookup (`me`), logout.
@@ -30,6 +32,21 @@ export const GOOGLE_WEB_CLIENT_ID_VALUE = GOOGLE_WEB_CLIENT_ID || "";
 // The auth backend route that exchanges a Google ID token for an HRCRM session.
 // It must verify the token and reply with the same JSON as `action=me`.
 export const GOOGLE_TOKEN_LOGIN_URL = `${AUTH_URL}?controller=auth&action=googleTokenLogin`;
+
+// Application (client) ID of the Azure app registration behind the HRCRM Microsoft login.
+// When set, "Continue with Microsoft" uses Microsoft's sign-in page in a browser tab.
+export const MICROSOFT_CLIENT_ID_VALUE = MICROSOFT_CLIENT_ID || "";
+
+// Directory (tenant) ID for a single-tenant Azure app; `common` for a multitenant one.
+export const MICROSOFT_TENANT_VALUE = MICROSOFT_TENANT_ID || "common";
+
+// Must be registered in Azure under "Mobile and desktop applications". The scheme matches
+// appAuthRedirectScheme in android/app/build.gradle.
+export const MICROSOFT_REDIRECT_URL = "ai.hrcrm.app://oauth/redirect";
+
+// The auth backend route that exchanges a Microsoft ID token for an HRCRM session.
+// It must verify the token and reply with the same JSON as `action=me`.
+export const MICROSOFT_TOKEN_LOGIN_URL = `${AUTH_URL}?controller=auth&action=microsoftTokenLogin`;
 
 // After OAuth the auth backend redirects to this URL inside the login WebView.
 // Landing on `me` gives the app the session JSON (user, userInfo, crm_access_token) in one step.

@@ -86,6 +86,8 @@ export const useAuthStore = create((set, get) => ({
     }
     clearCrmToken();
     await remove(SNAPSHOT_KEY);
+    // Google / Microsoft cookies stay so the next login lists this account without a
+    // password; the login screen forces the account chooser instead (see AuthWebView).
     await signOutGoogleNative();
     set({ status: "signedOut", user: {}, userInfo: emptyInfo, notice: null });
   },

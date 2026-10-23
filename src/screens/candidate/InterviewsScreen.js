@@ -60,7 +60,7 @@ function Group({ title, rounds, empty }) {
       {rounds.length === 0 ? <Text style={type.small}>{empty}</Text> : rounds.map(({ record, date, status }) => (
         <Card key={record.id}>
           <Row style={{ justifyContent: "space-between" }}>
-            <Text style={type.heading}>{record.round}</Text>
+            <Text style={[type.heading, { flex: 1, minWidth: 0 }]} numberOfLines={2}>{record.round}</Text>
             <Chip label={status.label} tone={status.tone} small />
           </Row>
           {record.jobTitle ? <Text style={type.small}>{record.jobTitle}</Text> : null}

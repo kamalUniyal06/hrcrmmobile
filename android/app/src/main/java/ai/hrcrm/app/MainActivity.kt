@@ -1,4 +1,4 @@
-package ai.hrcrm.mobile
+package ai.hrcrm.app
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

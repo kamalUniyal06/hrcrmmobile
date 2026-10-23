@@ -18,6 +18,7 @@ import { fetchAttendanceLimits } from '../src/api/limits.api';
 import { createIncrement, getPendingIncrement } from '../src/api/increment.api';
 import { applicationStage, applyToJob, candidateInterviewStatus, fetchMyInterviews, findCandidate, hiringProgress, needsProfile, salaryRange } from '../src/api/candidate.api';
 import { boardState, buildCandidateListRequest, fetchCandidatePage, groupInterviews, isExEmployee, uniqueInterviews } from '../src/api/admin.api';
+import { markStepNotified, startResignation } from '../src/api/resignation.api';
 
 // Use React Native's FormData (with getParts) instead of Node's so file parts keep their uri/name/type.
 global.FormData = require("react-native/Libraries/Network/FormData").default || require("react-native/Libraries/Network/FormData");
@@ -183,5 +184,27 @@ describe('admin', () => {
     expect(boardState(records[3])).toBe('unscheduled');
     expect(boardState(records[0])).toBe('decided');
     expect(isExEmployee({ stage_id_name: 'Ex Employee', hrc_phase_id_name: 'Exit' })).toBe(true);
+  });
+});
+
+describe('resignation', () => {
+  test('reuses an existing record, otherwise creates one keyed by email (web contract)', async () => {
+    gateway.mockResolvedValueOnce(ok([{ id: 'r1', name: 'kamal@example.com', tl_token: 'T1' }]));
+    expect(await startResignation('kamal@example.com')).toMatchObject({ id: 'r1' });
+    expect(gateway).toHaveBeenCalledTimes(1);
+    expect(gateway.mock.calls[0][0]).toMatchObject({ action: 'fetch', module: 'hrc_resignation', filters: { name: 'kamal@example.com' } });
+
+    gateway.mockReset();
+    gateway
+      .mockResolvedValueOnce(ok([]))
+      .mockResolvedValueOnce({ success: true, record: { id: 'r2', tl_token: 'T2' } });
+    expect(await startResignation('kamal@example.com')).toMatchObject({ id: 'r2' });
+    expect(gateway.mock.calls[1][0]).toEqual({ action: 'create', module: 'hrc_resignation', data: { name: 'kamal@example.com' } });
+  });
+
+  test('marks a step notified with the web field value', async () => {
+    gateway.mockResolvedValue({ success: true });
+    await markStepNotified('r1', 'notify_tl');
+    expect(gateway.mock.calls[0][0]).toEqual({ action: 'update', module: 'hrc_resignation', id: 'r1', data: { notify_tl: '1' } });
   });
 });

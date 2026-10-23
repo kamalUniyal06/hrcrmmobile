@@ -28,7 +28,7 @@ export function OffboardingScreen() {
           return (
             <Card key={record.id}>
               <Row style={{ justifyContent: "space-between" }}>
-                <Text style={type.subheading}>{employee ? fullName(employee) : plainText(record.name)}</Text>
+                <Text style={[type.subheading, { flex: 1, minWidth: 0 }]} numberOfLines={1}>{employee ? fullName(employee) : plainText(record.name)}</Text>
                 <Chip label={clean(record.status) || (isOpen(record) ? "Open" : "Closed")} tone={isOpen(record) ? "attention" : "neutral"} small />
               </Row>
               <KeyValue label="Email" value={record.name} />
@@ -60,7 +60,7 @@ export function IncrementRequestsScreen() {
           return (
             <Card key={record.id}>
               <Row style={{ justifyContent: "space-between" }}>
-                <Text style={type.subheading}>{employee ? fullName(employee) : record.name}</Text>
+                <Text style={[type.subheading, { flex: 1, minWidth: 0 }]} numberOfLines={1}>{employee ? fullName(employee) : record.name}</Text>
                 <Chip label={complete ? "Complete" : `${answered}/${total} answered`} tone={complete ? "success" : "attention"} small />
               </Row>
               <KeyValue label="Requested annual salary" value={`₹ ${money(record.description)}`} />

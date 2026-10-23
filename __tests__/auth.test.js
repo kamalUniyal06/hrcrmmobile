@@ -1,19 +1,24 @@
-// Session plumbing: CRM token cache, refresh fallbacks, Bearer injection, store bootstrap, native Google fallback.
+// Session plumbing: CRM token cache, refresh fallbacks, Bearer injection, store bootstrap, native Google and Microsoft fallback.
 jest.mock('@react-native-async-storage/async-storage');
 
 const mockGoogle = { configure: jest.fn(), hasPlayServices: jest.fn(), signIn: jest.fn(), signOut: jest.fn() };
 jest.mock('@react-native-google-signin/google-signin', () => ({
-  GoogleSignin: mockGoogle,
+  // Getter: the store imports googleAuth before `mockGoogle` is initialised.
+  get GoogleSignin() {
+    return mockGoogle;
+  },
   isSuccessResponse: (response) => response?.type === 'success',
   isErrorWithCode: (error) => Boolean(error && error.code),
   statusCodes: { SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED', IN_PROGRESS: 'IN_PROGRESS', PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE' },
 }));
 
+const mockAppAuth = { authorize: jest.fn() };
+jest.mock('react-native-app-auth', () => mockAppAuth);
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as crmAuth from '../src/services/crmAuth';
 import { crmClient } from '../src/services/crmClient';
 import { useAuthStore, normalizeMe, selectRole } from '../src/store/authStore';
-import { signInWithGoogleNative } from '../src/services/googleAuth';
 
 const meJson = (overrides = {}) => ({
   user: { email: 'kamal@example.com' },
@@ -155,6 +160,15 @@ describe('authStore', () => {
     expect(await AsyncStorage.getItem('hrcrm.session')).toBeNull();
   });
 
+  test('signing out ends the server session and forgets the native Google account', async () => {
+    global.fetch.mockResolvedValue(jsonResponse(200, {}));
+    await useAuthStore.getState().signInWithMe(meJson());
+    await useAuthStore.getState().signOut();
+    expect(mockGoogle.signOut).toHaveBeenCalled();
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signedOut', user: {} });
+    expect(await AsyncStorage.getItem('hrcrm.session')).toBeNull();
+  });
+
   test('bootstrap with no saved session and a 401 ends signed out without a notice', async () => {
     useAuthStore.setState({ status: 'booting', user: {}, userInfo: {}, notice: null });
     global.fetch.mockResolvedValue(jsonResponse(401, { error: 'Invalid token' }));
@@ -188,7 +202,58 @@ describe('native Google sign-in', () => {
   });
 
   test('without a client id it defers to the web flow immediately', async () => {
-    expect((await signInWithGoogleNative()).status).toBe('fallback');
+    jest.resetModules();
+    jest.doMock('../src/config', () => ({ ...jest.requireActual('../src/config'), GOOGLE_WEB_CLIENT_ID_VALUE: '' }));
+    const { signInWithGoogleNative: signIn } = require('../src/services/googleAuth');
+    expect((await signIn()).status).toBe('fallback');
     expect(mockGoogle.signIn).not.toHaveBeenCalled();
+    jest.dontMock('../src/config');
+  });
+});
+
+describe('native Microsoft sign-in', () => {
+  const loadWithClientId = (clientId) => {
+    jest.resetModules();
+    jest.doMock('../src/config', () => ({ ...jest.requireActual('../src/config'), MICROSOFT_CLIENT_ID_VALUE: clientId }));
+    return require('../src/services/microsoftAuth').signInWithMicrosoftNative;
+  };
+
+  afterEach(() => jest.dontMock('../src/config'));
+
+  test('skips the browser tab while the backend has no token route', async () => {
+    const signIn = loadWithClientId('azure-client-id');
+    global.fetch.mockResolvedValue(jsonResponse(200, { error: 'Invalid auth route' }));
+    expect((await signIn()).status).toBe('fallback');
+    expect((await signIn()).status).toBe('fallback');
+    expect(mockAppAuth.authorize).not.toHaveBeenCalled(); // no second sign-in in a browser tab
+    expect(global.fetch).toHaveBeenCalledTimes(1); // the route is checked once per app run
+    expect(global.fetch.mock.calls[0][0]).toContain('action=microsoftTokenLogin');
+  });
+
+  test('uses the browser tab once the backend has the token route', async () => {
+    const signIn = loadWithClientId('azure-client-id');
+    let exchange = jsonResponse(200, meJson());
+    // The route check posts `{}`; the real exchange posts the tokens.
+    global.fetch.mockImplementation(async (url, options) => (options.body === '{}' ? jsonResponse(400, { error: 'id_token missing' }) : exchange));
+    mockAppAuth.authorize.mockResolvedValue({ idToken: 'ms-id-token', accessToken: 'ms-access-token' });
+    expect((await signIn()).status).toBe('ok');
+    expect(mockAppAuth.authorize.mock.calls[0][0]).toMatchObject({ clientId: 'azure-client-id', redirectUrl: 'ai.hrcrm.app://oauth/redirect' });
+    const tokenCall = global.fetch.mock.calls.find(([, options]) => options.body !== '{}');
+    expect(JSON.parse(tokenCall[1].body)).toEqual({ id_token: 'ms-id-token', access_token: 'ms-access-token' });
+
+    exchange = jsonResponse(403, { error: 'No HRCRM account for this email' });
+    expect(await signIn()).toEqual({ status: 'error', reason: 'No HRCRM account for this email' });
+
+    mockAppAuth.authorize.mockRejectedValue(new Error('User cancelled flow'));
+    expect((await signIn()).status).toBe('cancelled');
+
+    mockAppAuth.authorize.mockRejectedValue(new Error('AADSTS50011: redirect URI mismatch'));
+    expect((await signIn()).status).toBe('fallback');
+  });
+
+  test('without a client id it defers to the web flow immediately', async () => {
+    const signIn = loadWithClientId('');
+    expect((await signIn()).status).toBe('fallback');
+    expect(mockAppAuth.authorize).not.toHaveBeenCalled();
   });
 });

@@ -1,11 +1,18 @@
-import { Alert, Text, View } from "react-native";
-import { colors, type } from "../../theme";
-import { Avatar, Button, Card, Chip, KeyValue, ListRow, Notice, Row, Screen, SectionTitle } from "../../components/ui";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
+import { colors, radius, shadow, tones, type } from "../../theme";
+import { Button, Card, Chip, Notice, Row, Screen, SectionTitle } from "../../components/ui";
 import { selectRole, useAuthStore } from "../../store/authStore";
 import { missingConfig } from "../../config";
+import { initials } from "../../utils/records";
+
+const ROLE_LABEL = { admin: "HR admin", employee: "Employee", candidate: "Candidate" };
+
+// Tints cycled across the shortcut icons so the list reads at a glance.
+const SHORTCUT_TONES = ["info", "success", "attention", "progress", "closed"];
 
 /**
- * "More" tab: who is signed in, role-specific shortcuts, sign out.
+ * "Profile" tab: who is signed in, role-specific shortcuts, sign out.
  * `links` = [{ icon, title, subtitle, screen, params }] from the role navigator.
  */
 export default function AccountScreen({ navigation, route }) {
@@ -22,44 +29,120 @@ export default function AccountScreen({ navigation, route }) {
       { text: "Sign out", style: "destructive", onPress: () => signOut() },
     ]);
 
+  const details = [
+    { icon: "mail", tone: "info", label: "Email", value: user?.email },
+    { icon: "person", tone: "success", label: "Type", value: userInfo?.subject_type, capitalize: true },
+    { icon: "flag", tone: "attention", label: "Stage", value: userInfo?.stage },
+    { icon: "shield-checkmark", tone: "progress", label: "Status", value: userInfo?.status },
+  ].filter((item) => item.value !== undefined && item.value !== null && item.value !== "");
+
   return (
     <Screen>
-      <Card style={{ alignItems: "center", gap: 8, paddingVertical: 24 }}>
-        <Avatar name={user?.email || "?"} size={64} />
-        <Text style={type.heading}>{user?.email || "Signed in"}</Text>
-        <Row>
-          <Chip label={{ admin: "HR admin", employee: "Employee", candidate: "Candidate" }[role]} tone={role === "admin" ? "lime" : "progress"} />
-          {userInfo?.stage ? <Chip label={userInfo.stage} tone="neutral" /> : null}
+      {/* Profile banner in the brand blue. */}
+      <View style={styles.hero}>
+        <View style={styles.heroGlow} />
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials(user?.email || "?")}</Text>
+          <View style={styles.onlineDot} />
+        </View>
+        <Text style={styles.email} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>{user?.email || "Signed in"}</Text>
+        <Row style={{ flexWrap: "wrap", justifyContent: "center", marginTop: 2 }}>
+          <Chip label={ROLE_LABEL[role]} tone="lime" />
+          {userInfo?.stage ? (
+            <View style={styles.stageChip}>
+              <Text style={styles.stageText} numberOfLines={1}>{userInfo.stage}</Text>
+            </View>
+          ) : null}
         </Row>
-      </Card>
+      </View>
 
       {missing.length ? (
         <Notice tone="closed" icon="key-outline" title="App keys missing" message={`Requests will fail until ${missing.join(" and ")} are set in .env.`} />
       ) : null}
 
       {links.length ? (
-        <View style={{ gap: 10 }}>
+        <View style={styles.section}>
           <SectionTitle title="Shortcuts" />
-          {links.map((link) => (
-            <ListRow key={link.title} icon={link.icon} title={link.title} subtitle={link.subtitle} onPress={() => navigation.navigate(link.screen, link.params)} />
-          ))}
+          {/* Each shortcut is its own card, spaced apart. */}
+          <View style={styles.shortcutList}>
+            {links.map((link, index) => {
+              // A link may set its own tone (the red "I want to resign"); others cycle.
+              const danger = link.tone === "closed";
+              const tone = tones[link.tone || SHORTCUT_TONES[index % SHORTCUT_TONES.length]];
+              return (
+                <Pressable
+                  key={link.title}
+                  onPress={() => navigation.navigate(link.screen, link.params)}
+                  style={({ pressed }) => [styles.shortcut, danger && styles.shortcutDanger, pressed && { opacity: 0.7 }]}
+                >
+                  <View style={[styles.shortcutIcon, { backgroundColor: tone.bg }]}>
+                    <Ionicons name={link.icon} size={18} color={tone.fg} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[type.subheading, danger && { color: colors.destructive }]} numberOfLines={1}>{link.title}</Text>
+                    {link.subtitle ? <Text style={type.small} numberOfLines={1}>{link.subtitle}</Text> : null}
+                  </View>
+                  <View style={[styles.chevron, danger && { backgroundColor: colors.destructiveSoft }]}>
+                    <Ionicons name="chevron-forward" size={16} color={danger ? colors.destructive : colors.primary} />
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       ) : null}
 
-      <View style={{ gap: 10 }}>
+      <View style={styles.section}>
         <SectionTitle title="Account details" />
-        <Card>
-          <KeyValue label="Email" value={user?.email} />
-          <KeyValue label="Record ID" value={userInfo?.id} />
-          <KeyValue label="Type" value={userInfo?.subject_type} />
-          <KeyValue label="Stage" value={userInfo?.stage} />
-          <KeyValue label="Phase" value={userInfo?.phase} />
-          <KeyValue label="Status" value={userInfo?.status} last />
+        <Card style={styles.listCard}>
+          {details.map((item, index) => {
+            const palette = tones[item.tone] || tones.progress;
+            const value = String(item.value);
+            return (
+              <View key={item.label} style={[styles.detail, index > 0 && styles.rowBorder]}>
+                <View style={[styles.detailIcon, { backgroundColor: palette.bg }]}>
+                  <Ionicons name={item.icon} size={17} color={palette.fg} />
+                </View>
+                {/* Label above value: long values (email, record ID) get the full width. */}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.detailLabel}>{item.label}</Text>
+                  <Text style={styles.detailValue}>
+                    {item.capitalize ? value.charAt(0).toUpperCase() + value.slice(1) : value}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
         </Card>
       </View>
 
-      <Button title="Sign out" icon="log-out-outline" variant="outline" full onPress={confirmSignOut} style={{ borderColor: colors.destructive }} />
-      <Text style={[type.small, { textAlign: "center" }]}>HRCRM mobile · same data as app.hrcrm.ai</Text>
+      <View style={styles.signOutArea}>
+        <Button title="Sign out" icon="log-out-outline" variant="destructive" full onPress={confirmSignOut} style={styles.signOut} />
+      </View>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  section: { gap: 10 },
+  hero: { alignItems: "center", gap: 10, paddingVertical: 24, paddingHorizontal: 18, borderRadius: radius.lg, backgroundColor: colors.navy, overflow: "hidden" },
+  heroGlow: { position: "absolute", width: 200, height: 200, borderRadius: 100, right: -70, top: -100, backgroundColor: "rgba(59,130,246,0.28)" },
+  avatar: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", backgroundColor: colors.primary },
+  avatarText: { fontSize: 28, fontWeight: "600", color: "#FFFFFF" },
+  onlineDot: { position: "absolute", right: 2, bottom: 2, width: 16, height: 16, borderRadius: 8, backgroundColor: colors.success, borderWidth: 3, borderColor: colors.navy },
+  email: { fontSize: 17, lineHeight: 22, fontWeight: "600", color: "#FFFFFF", maxWidth: "100%", textAlign: "center" },
+  stageChip: { paddingVertical: 5, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.18)" },
+  stageText: { fontSize: 13, fontWeight: "600", color: "#FFFFFF" },
+  listCard: { paddingVertical: 4, paddingHorizontal: 14, gap: 0 },
+  rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  shortcutList: { gap: 12 },
+  shortcut: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, paddingHorizontal: 14, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, ...shadow.card },
+  shortcutDanger: { borderColor: "rgba(212,24,61,0.22)" },
+  shortcutIcon: { width: 40, height: 40, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  chevron: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
+  detail: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 },
+  detailIcon: { width: 40, height: 40, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  detailLabel: { ...type.tiny, fontSize: 10, letterSpacing: 0.6 },
+  detailValue: { fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.navy, marginTop: 2 },  signOutArea: { marginTop: 6, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border },
+  signOut: { minHeight: 50 },
+});

@@ -1,12 +1,16 @@
-// Brand palette from the web app's DESIGN.md (HRCRM theme: forest green + lime).
+// Brand palette: primary is a lighter take on the HRCRM logo blue (logo ~#0068F8),
+// with the web app's lime as the accent. Status greens (success) stay green.
 export const colors = {
-  background: "#F7F8F6",
+  background: "#F8F9FF",
+  // Deep midnight navy for hero banners and the main timer ("Kinetic Executive" look).
+  navy: "#0D1B2A",
+  navySoft: "#1B2B3D",
   foreground: "#0B1310",
   card: "#FFFFFF",
-  primary: "#09533D",
-  primaryDeep: "#064030",
+  primary: "#3B82F6",
+  primaryDeep: "#2563EB",
   primaryForeground: "#FFFFFF",
-  primarySoft: "#E6F0EC",
+  primarySoft: "#EBF3FF",
   lime: "#D4FA3C",
   oliveLime: "#8FA61B",
   sidebar: "#0B1310",
@@ -15,7 +19,7 @@ export const colors = {
   successSoft: "#D1FAE5",
   teal: "#3DA9A5",
   muted: "#ECEFEC",
-  mutedForeground: "#6A7074",
+  mutedForeground: "#5F6670",
   border: "rgba(0,0,0,0.10)",
   destructive: "#D4183D",
   destructiveSoft: "#FCE4EA",
@@ -29,13 +33,17 @@ export const radius = { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 };
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 
+// Every style carries a lineHeight: without one Android clips ascenders/descenders in
+// tight rows and multi-line text spacing varies between fonts. Bold text uses "600", never
+// "700"/"bold": React Native asks Android for that exact weight, and some OEM system fonts
+// (Xiaomi MiSans) ship a 600 face but no 700, so 700 falls back to regular.
 export const type = {
-  title: { fontSize: 24, fontWeight: "600", color: colors.foreground, letterSpacing: -0.4 },
-  heading: { fontSize: 18, fontWeight: "600", color: colors.foreground },
-  subheading: { fontSize: 15, fontWeight: "600", color: colors.foreground },
-  body: { fontSize: 15, color: colors.foreground, lineHeight: 21 },
-  small: { fontSize: 13, color: colors.mutedForeground, lineHeight: 18 },
-  tiny: { fontSize: 11, color: colors.mutedForeground, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.6 },
+  title: { fontSize: 24, lineHeight: 30, fontWeight: "600", color: colors.foreground, letterSpacing: -0.4 },
+  heading: { fontSize: 18, lineHeight: 24, fontWeight: "600", color: colors.foreground, letterSpacing: -0.2 },
+  subheading: { fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.foreground },
+  body: { fontSize: 15, lineHeight: 21, color: colors.foreground },
+  small: { fontSize: 13, lineHeight: 18, color: colors.mutedForeground },
+  tiny: { fontSize: 11, lineHeight: 15, color: colors.mutedForeground, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
 };
 
 export const shadow = {

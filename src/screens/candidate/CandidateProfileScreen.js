@@ -31,9 +31,9 @@ export function CandidateProfileScreen({ navigation }) {
     <Screen refreshing={profile.isFetching} onRefresh={() => profile.refetch()}>
       <Card style={{ alignItems: "center", gap: 8, paddingVertical: 24 }}>
         <Avatar name={candidate ? fullName(candidate, email) : email} size={64} />
-        <Text style={type.heading}>{candidate ? fullName(candidate, email) : email}</Text>
-        <Text style={type.small}>{email}</Text>
-        <Row>
+        <Text style={[type.heading, { textAlign: "center" }]} numberOfLines={2}>{candidate ? fullName(candidate, email) : email}</Text>
+        <Text style={[type.small, { textAlign: "center" }]} numberOfLines={1}>{email}</Text>
+        <Row style={{ flexWrap: "wrap", justifyContent: "center" }}>
           <Chip label="Candidate" tone="progress" />
           {candidate?.hrc_stages_id_c_name ? <Chip label={candidate.hrc_stages_id_c_name} tone="lime" /> : null}
         </Row>

@@ -80,20 +80,77 @@ export function initials(name = "") {
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
 }
 
-/** Strip HTML and decode the common entities the CRM returns. */
+const ENTITIES = {
+  nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'",
+  rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“", ndash: "–", mdash: "—", hellip: "…", bull: "•", middot: "·", copy: "©", reg: "®", trade: "™", rupee: "₹",
+};
+
+function decodeEntities(text) {
+  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, name) => {
+    if (name[0] === "#") {
+      const code = name[1] === "x" || name[1] === "X" ? parseInt(name.slice(2), 16) : Number(name.slice(1));
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    }
+    return ENTITIES[name.toLowerCase()] ?? match;
+  });
+}
+
+/**
+ * Strip HTML and decode the entities the CRM returns. The CRM often stores rich text
+ * escaped (`&lt;p&gt;Hi&lt;/p&gt;`), so entities are decoded before tags are removed.
+ */
 export function plainText(value) {
-  return String(value ?? "")
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "")
-    .replace(/<br\s*\/?>|<\/(?:p|li|div|h[1-6])>/gi, "\n")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
-    .replace(/\r\n/g, "\n")
+  const text = unescapeHtml(value);
+  return decodeEntities(
+    text
+      .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "")
+      .replace(/<li\b[^>]*>/gi, "• ")
+      .replace(/<br\s*\/?>|<\/(?:p|li|div|tr|h[1-6])>/gi, "\n")
+      .replace(/<[^>]*>/g, ""),
+  )
+    .replace(/\r\n?/g, "\n")
     .replace(/[^\S\n]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+/** Turns CRM-escaped HTML back into markup. Up to two passes: escaped, and escaped twice (`&amp;lt;p&amp;gt;`). */
+function unescapeHtml(value) {
+  let text = String(value ?? "");
+  for (let pass = 0; pass < 2 && /&(lt|gt|amp);/i.test(text); pass += 1) text = decodeEntities(text);
+  return text;
+}
+
+/**
+ * Splits rich text into readable blocks: `{ type: "text", text }` paragraphs and
+ * `{ type: "table", header, rows }` tables (cells as plain text). Used where tables
+ * must stay tables, e.g. team lists in announcements.
+ */
+export function htmlBlocks(value) {
+  const html = unescapeHtml(value);
+  const blocks = [];
+  const pushText = (segment) => {
+    const text = plainText(segment);
+    if (text) blocks.push({ type: "text", text });
+  };
+  const tablePattern = /<table\b[^>]*>([\s\S]*?)<\/table>/gi;
+  let last = 0;
+  let match;
+  while ((match = tablePattern.exec(html))) {
+    pushText(html.slice(last, match.index));
+    last = tablePattern.lastIndex;
+    const rows = [...match[1].matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map((row) => ({
+      isHead: /<th\b/i.test(row[1]),
+      cells: [...row[1].matchAll(/<(td|th)\b[^>]*>([\s\S]*?)<\/\1>/gi)].map((cell) => plainText(cell[2])),
+    })).filter((row) => row.cells.some(Boolean));
+    if (!rows.length) continue;
+    // A <th> row is the header; otherwise the first row reads as one (e.g. "Team | Members").
+    const headIndex = rows.findIndex((row) => row.isHead);
+    const header = headIndex >= 0 ? rows[headIndex].cells : rows.length > 1 ? rows[0].cells : null;
+    const body = rows.filter((_, index) => index !== (headIndex >= 0 ? headIndex : header ? 0 : -1)).map((row) => row.cells);
+    blocks.push({ type: "table", header, rows: body });
+  }
+  pushText(html.slice(last));
+  return blocks;
 }

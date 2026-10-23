@@ -2,6 +2,7 @@ import { createContext, useContext, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Modal,
   Pressable,
   RefreshControl,
@@ -70,13 +71,14 @@ export function Card({ children, style, onPress, tone }) {
 export function SectionTitle({ title, hint, action, onAction, style }) {
   return (
     <View style={[styles.sectionTitle, style]}>
-      <View style={{ flex: 1 }}>
-        <Text style={type.heading}>{title}</Text>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.sectionTitleText} numberOfLines={2}>{title}</Text>
         {hint ? <Text style={type.small}>{hint}</Text> : null}
       </View>
       {action ? (
-        <Pressable onPress={onAction} hitSlop={8}>
-          <Text style={styles.link}>{action}</Text>
+        <Pressable onPress={onAction} hitSlop={8} style={({ pressed }) => [styles.actionPill, pressed && { opacity: 0.7 }]}>
+          <Text style={styles.actionPillText}>{action}</Text>
+          <Ionicons name="chevron-forward" size={13} color={colors.primary} />
         </Pressable>
       ) : null}
     </View>
@@ -91,7 +93,8 @@ export function Row({ children, style, gap = spacing.sm, align = "center" }) {
 
 /* ── Controls ───────────────────────────────────────────────────────────── */
 
-export function Button({ title, onPress, variant = "primary", loading = false, disabled = false, icon, style, small = false, full = false }) {
+/** `icon` is an Ionicons name; `image` is a bundled picture (e.g. a brand logo) shown instead. */
+export function Button({ title, onPress, variant = "primary", loading = false, disabled = false, icon, image, style, small = false, full = false }) {
   const palette = {
     primary: { bg: colors.primary, fg: colors.primaryForeground, border: colors.primary },
     secondary: { bg: colors.primarySoft, fg: colors.primary, border: colors.primarySoft },
@@ -121,8 +124,12 @@ export function Button({ title, onPress, variant = "primary", loading = false, d
         <ActivityIndicator color={palette.fg} size="small" />
       ) : (
         <>
-          {icon ? <Ionicons name={icon} size={small ? 15 : 18} color={palette.fg} /> : null}
-          <Text style={[styles.buttonText, small && { fontSize: 13 }, { color: palette.fg }]}>{title}</Text>
+          {image ? (
+            <Image source={image} style={{ width: small ? 15 : 20, height: small ? 15 : 20 }} resizeMode="contain" />
+          ) : icon ? (
+            <Ionicons name={icon} size={small ? 15 : 18} color={palette.fg} />
+          ) : null}
+          <Text style={[styles.buttonText, small && { fontSize: 13 }, { color: palette.fg }]} numberOfLines={1}>{title}</Text>
         </>
       )}
     </Pressable>
@@ -228,7 +235,7 @@ export function SegmentedControl({ options, value, onChange, style }) {
         const active = item.value === value;
         return (
           <Pressable key={String(item.value)} onPress={() => onChange(item.value)} style={[styles.segment, active && styles.segmentActive]}>
-            <Text style={[styles.segmentText, active && { color: colors.foreground }]} numberOfLines={1}>
+            <Text style={[styles.segmentText, active && { color: colors.foreground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
               {item.label}
               {item.count !== undefined ? <Text style={{ color: colors.mutedForeground }}> {item.count}</Text> : null}
             </Text>
@@ -268,7 +275,7 @@ export function ListRow({ title, subtitle, meta, right, icon, iconTone = "progre
 export function Avatar({ name, size = 40, uri }) {
   return (
     <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
-      <Text style={{ color: colors.lime, fontWeight: "700", fontSize: size * 0.38 }}>{initials(name)}</Text>
+      <Text style={{ color: colors.lime, fontWeight: "600", fontSize: size * 0.38 }}>{initials(name)}</Text>
     </View>
   );
 }
@@ -353,15 +360,21 @@ const styles = StyleSheet.create({
   pageHeader: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   pageHeaderDark: { backgroundColor: colors.sidebar, padding: spacing.lg, borderRadius: radius.xl },
   card: { backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.sm, ...shadow.card },
-  sectionTitle: { flexDirection: "row", alignItems: "flex-end", gap: spacing.md },
+  sectionTitle: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  sectionTitleText: { fontSize: 18, lineHeight: 24, fontWeight: "600", color: colors.foreground, letterSpacing: -0.2 },
+  actionPill: { flexDirection: "row", alignItems: "center", gap: 2, paddingVertical: 6, paddingLeft: 12, paddingRight: 8, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
+  actionPillText: { fontSize: 13, fontWeight: "600", color: colors.primary },
   link: { color: colors.primary, fontWeight: "600", fontSize: 13 },
   divider: { height: 1, backgroundColor: colors.border },
   button: { minHeight: 46, paddingHorizontal: 18, borderRadius: radius.md, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, alignSelf: "flex-start" },
   buttonSmall: { minHeight: 36, paddingHorizontal: 12, borderRadius: radius.sm },
-  buttonText: { fontSize: 15, fontWeight: "600" },
+  buttonText: { fontSize: 15, lineHeight: 20, fontWeight: "600", flexShrink: 1 },
   iconButton: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  chip: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.pill },
-  chipText: { fontSize: 12, fontWeight: "600" },
+  // Chips sit in rows next to titles: centred vertically, and allowed to shrink (text
+  // truncates) so they never push a title out of the row. A chip placed on its own in a
+  // column passes style={{ alignSelf: "flex-start" }}.
+  chip: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "center", flexShrink: 1, maxWidth: "100%", paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.pill },
+  chipText: { fontSize: 12, lineHeight: 16, fontWeight: "600", flexShrink: 1 },
   fieldLabel: { fontSize: 13, fontWeight: "600", color: colors.foreground },
   input: { minHeight: 46, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.card, fontSize: 15, color: colors.foreground },
   inputMultiline: { minHeight: 100, textAlignVertical: "top" },
@@ -372,14 +385,14 @@ const styles = StyleSheet.create({
   sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   sheetOption: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.border },
   segmented: { flexDirection: "row", backgroundColor: colors.muted, borderRadius: radius.md, padding: 3 },
-  segment: { flex: 1, paddingVertical: 8, borderRadius: radius.sm, alignItems: "center" },
+  segment: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, borderRadius: radius.sm, alignItems: "center" },
   segmentActive: { backgroundColor: colors.card, ...shadow.card },
   segmentText: { fontSize: 13, fontWeight: "600", color: colors.mutedForeground },
   listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 12, paddingHorizontal: spacing.md, backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   rowIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   avatar: { backgroundColor: colors.panel, alignItems: "center", justifyContent: "center" },
   statTile: { flex: 1, minWidth: 140, gap: 4, padding: spacing.md },
-  statValue: { fontSize: 26, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
+  statValue: { fontSize: 26, lineHeight: 32, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
   keyValue: { flexDirection: "row", gap: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   state: { alignItems: "center", justifyContent: "center", gap: 8, padding: spacing.xl },
   stateBox: { borderWidth: 1, borderStyle: "dashed", borderColor: colors.border, borderRadius: radius.lg, backgroundColor: colors.card },

@@ -11,6 +11,8 @@ import AttendanceScreen from "../screens/employee/AttendanceScreen";
 import LeaveScreen from "../screens/employee/LeaveScreen";
 import ApplyLeaveScreen from "../screens/employee/ApplyLeaveScreen";
 import IncrementScreen from "../screens/employee/IncrementScreen";
+import ResignationScreen from "../screens/employee/ResignationScreen";
+import AnnouncementDetailScreen from "../screens/employee/AnnouncementDetailScreen";
 import AccountScreen from "../screens/shared/AccountScreen";
 import CandidateHomeScreen from "../screens/candidate/CandidateHomeScreen";
 import { JobDetailScreen, JobsScreen } from "../screens/candidate/JobsScreen";
@@ -30,11 +32,18 @@ const navTheme = {
 };
 
 const stackOptions = {
-  headerTintColor: colors.foreground,
-  headerTitleStyle: { fontWeight: "600" },
+  headerTintColor: colors.navy,
+  headerTitleStyle: { fontWeight: "600", fontSize: 18, color: colors.navy },
   headerStyle: { backgroundColor: colors.background },
   headerShadowVisible: false,
   contentStyle: { backgroundColor: colors.background },
+};
+
+// Tab root screens with `centerTitle` (Profile) get a centred, larger, bold navy title,
+// matching the app's other titles (home "HRCRM" bar, banner headings).
+const centeredTitleOptions = {
+  headerTitleAlign: "center",
+  headerTitleStyle: { fontWeight: "600", fontSize: 22, color: colors.navy },
 };
 
 const Tab = createBottomTabNavigator();
@@ -50,7 +59,6 @@ const ICONS = {
   Approvals: ["checkmark-done-circle", "checkmark-done-circle-outline"],
   Candidates: ["person-add", "person-add-outline"],
   People: ["people-circle", "people-circle-outline"],
-  More: ["grid", "grid-outline"],
 };
 
 const tabOptions = ({ route }) => ({
@@ -81,8 +89,14 @@ function stack(definitions, initialParams) {
   return function StackNavigator() {
     return (
       <Stack.Navigator screenOptions={stackOptions}>
-        {screens.map(({ name, component, title, headerShown }, index) => (
-          <Stack.Screen key={name} name={name} component={component} options={{ title, headerShown }} initialParams={index === 0 ? initialParams : undefined} />
+        {screens.map(({ name, component, title, headerShown, centerTitle }, index) => (
+          <Stack.Screen
+            key={name}
+            name={name}
+            component={component}
+            options={{ title, headerShown, ...(centerTitle ? centeredTitleOptions : null) }}
+            initialParams={index === 0 ? initialParams : undefined}
+          />
         ))}
       </Stack.Navigator>
     );
@@ -92,20 +106,23 @@ function stack(definitions, initialParams) {
 // ── Employee ────────────────────────────────────────────────────────────────
 const EmployeeHomeStack = stack([
   { name: "EmployeeHome", component: EmployeeHomeScreen, headerShown: false },
+  { name: "AnnouncementDetail", component: AnnouncementDetailScreen, title: "Announcement" },
 ]);
 const EmployeeAttendanceStack = stack([{ name: "AttendanceCalendar", component: AttendanceScreen, headerShown: false }]);
 const EmployeeLeaveStack = stack([
   { name: "LeaveOverview", component: LeaveScreen, headerShown: false },
   { name: "ApplyLeave", component: ApplyLeaveScreen, title: "Apply for leave" },
 ]);
-const EmployeeMoreStack = stack(
+const EmployeeProfileStack = stack(
   [
-    { name: "Account", component: AccountScreen, title: "More" },
+    { name: "Account", component: AccountScreen, title: "Profile Screen", centerTitle: true },
     { name: "Increment", component: IncrementScreen, title: "Increment request" },
+    { name: "Resignation", component: ResignationScreen, title: "Resignation" },
   ],
   {
     links: [
       { icon: "trending-up-outline", title: "Increment request", subtitle: "Ask for a salary revision", screen: "Increment" },
+      { icon: "exit-outline", title: "I want to resign", subtitle: "Start approval process", screen: "Resignation", tone: "closed" },
     ],
   },
 );
@@ -116,7 +133,7 @@ function EmployeeTabs() {
       <Tab.Screen name="Home" component={EmployeeHomeStack} />
       <Tab.Screen name="Attendance" component={EmployeeAttendanceStack} />
       <Tab.Screen name="Leave" component={EmployeeLeaveStack} />
-      <Tab.Screen name="More" component={EmployeeMoreStack} />
+      <Tab.Screen name="Profile" component={EmployeeProfileStack} />
     </Tab.Navigator>
   );
 }
@@ -129,7 +146,7 @@ const CandidateJobsStack = stack([
 ]);
 const CandidateInterviewsStack = stack([{ name: "InterviewList", component: InterviewsScreen, headerShown: false }]);
 const CandidateProfileStack = stack([
-  { name: "CandidateProfile", component: CandidateProfileScreen, title: "Profile" },
+  { name: "CandidateProfile", component: CandidateProfileScreen, title: "Profile Screen", centerTitle: true },
   { name: "CandidateProfileEdit", component: CandidateProfileEditScreen, title: "Edit profile" },
 ]);
 
@@ -159,9 +176,9 @@ const AdminPeopleStack = stack([
   { name: "EmployeeDetail", component: EmployeeDetailScreen, title: "Employee" },
   { name: "EmployeeAttendance", component: AttendanceScreen, title: "Attendance" },
 ]);
-const AdminMoreStack = stack(
+const AdminProfileStack = stack(
   [
-    { name: "Account", component: AccountScreen, title: "More" },
+    { name: "Account", component: AccountScreen, title: "Profile Screen", centerTitle: true },
     { name: "InterviewBoard", component: InterviewBoardScreen, title: "Interviews" },
     { name: "SystemAlerts", component: SystemAlertsScreen, title: "System alerts" },
     { name: "IncrementRequests", component: IncrementRequestsScreen, title: "Increment requests" },
@@ -190,7 +207,7 @@ function AdminTabs() {
       <Tab.Screen name="Approvals" component={AdminApprovalsStack} />
       <Tab.Screen name="Candidates" component={AdminCandidatesStack} />
       <Tab.Screen name="People" component={AdminPeopleStack} />
-      <Tab.Screen name="More" component={AdminMoreStack} />
+      <Tab.Screen name="Profile" component={AdminProfileStack} />
     </Tab.Navigator>
   );
 }

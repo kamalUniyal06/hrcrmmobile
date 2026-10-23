@@ -16,6 +16,8 @@ import AttendanceScreen from '../src/screens/employee/AttendanceScreen';
 import LeaveScreen from '../src/screens/employee/LeaveScreen';
 import ApplyLeaveScreen from '../src/screens/employee/ApplyLeaveScreen';
 import IncrementScreen from '../src/screens/employee/IncrementScreen';
+import ResignationScreen from '../src/screens/employee/ResignationScreen';
+import AnnouncementDetailScreen from '../src/screens/employee/AnnouncementDetailScreen';
 import AccountScreen from '../src/screens/shared/AccountScreen';
 import CandidateHomeScreen from '../src/screens/candidate/CandidateHomeScreen';
 import { JobDetailScreen, JobsScreen } from '../src/screens/candidate/JobsScreen';
@@ -32,9 +34,13 @@ import { IncrementRequestsScreen, OffboardingScreen } from '../src/screens/admin
 const navigation = { navigate: jest.fn(), goBack: jest.fn() };
 const route = (params = {}) => ({ params });
 
+// Today's clock-in in the CRM's MM/DD/YYYY HH:mm format, so "Clocked in" holds on any run date.
+const now = new Date();
+const todayLogin = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()} 09:12`;
+
 // Canned CRM data keyed by module so every screen has something to draw.
 const data = {
-  hrc_daily_activity: [{ id: 'd1', name: 'kamal@example.com', login: '10/21/2026 09:12', date_entered: '10/21/2026 09:12' }],
+  hrc_daily_activity: [{ id: 'd1', name: 'kamal@example.com', login: todayLogin, date_entered: todayLogin }],
   hrc_employees: [{ id: 'emp-1', first_name: 'Kamal', last_name: 'Uniyal', email1: 'kamal@example.com', available_planned_leaves: '4', available_sick_leaves: '2', current_designation: 'Developer' }],
   hrc_leaves: [{ id: 'l1', name: 'kamal@example.com', employee_id: 'emp-1', status: 'Applied', type_of_leave: 'Short leave', leave_from: '2026-10-25', leave_to: '2026-10-25', leave_days: '1', date_entered: '2026-10-20 10:00:00' }],
   hrc_holidays: [{ id: 'h1', name: 'Diwali', holiday_date: '10/30/2026' }],
@@ -141,8 +147,8 @@ describe('employee screens', () => {
     const { tree } = mount(<EmployeeHomeScreen navigation={navigation} />);
     await settle();
     const text = textOf(tree);
-    expect(text).toContain('Today');
-    expect(text).toContain('Clocked in');
+    expect(text).toContain('Working session');
+    expect(text).toContain('Checked in');
     expect(text).toContain('Town hall');
     expect(gateway).toHaveBeenCalledWith(expect.objectContaining({ module: 'hrc_daily_activity' }));
   });
@@ -152,7 +158,9 @@ describe('employee screens', () => {
     ['Leave', () => <LeaveScreen navigation={navigation} />, 'Annual Leave'],
     ['ApplyLeave', () => <ApplyLeaveScreen navigation={navigation} />, 'Submit leave request'],
     ['Increment', () => <IncrementScreen />, 'Current annual salary'],
-    ['Account', () => <AccountScreen navigation={navigation} route={route({ links: [{ icon: 'trending-up-outline', title: 'Increment request', screen: 'Increment' }] })} />, 'Sign out'],
+    ['Account', () => <AccountScreen navigation={navigation} route={route({ links: [{ icon: 'trending-up-outline', title: 'Increment request', screen: 'Increment' }, { icon: 'exit-outline', title: 'I want to resign', screen: 'Resignation', tone: 'closed' }] })} />, 'I want to resign'],
+    ['Resignation', () => <ResignationScreen navigation={navigation} />, 'Are you sure you want to resign?'],
+    ['AnnouncementDetail', () => <AnnouncementDetailScreen route={route({ alert: { id: 'a1', name: 'Town hall', description: '<p>Dear All,</p><p>Please confirm attendance</p><table><tr><th>Team</th><th>Members</th></tr><tr><td>Team A</td><td>Kamal</td></tr></table>', date_entered: '2026-10-20 10:00:00' } })} />, 'Please confirm attendance'],
   ])('%s renders', async (_name, render, expected) => {
     const { tree } = mount(render(), { headerShown: true });
     await settle();

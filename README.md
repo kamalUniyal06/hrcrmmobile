@@ -54,7 +54,7 @@ The web app signs in with Google / Microsoft through `app.hrcrm.ai/public/index.
 
 **Web flow (works today, no setup).** The phone does the same inside a WebView (`src/components/AuthWebView.js`): the `frontend` return URL points at `action=me`, so after OAuth the WebView lands on the session JSON and the app reads `user`, `userInfo` and the short-lived `crm_access_token`. Microsoft always uses this flow.
 
-**Native Google dialog (`src/services/googleAuth.js`).** When `GOOGLE_WEB_CLIENT_ID` is set, "Continue with Google" opens the Google Play Services account picker and posts the returned ID token to `controller=auth&action=googleTokenLogin`. That route must be added to the auth backend: verify the token against the web client ID, open the PHP session for that email and reply with the same JSON as `action=me`. Google Cloud needs an Android OAuth client with package `ai.hrcrm.mobile` and the SHA-1 of each signing key (`cd android && gradlew signingReport`). Until both exist the app falls back to the web flow automatically.
+**Native Google dialog (`src/services/googleAuth.js`).** When `GOOGLE_WEB_CLIENT_ID` is set, "Continue with Google" opens the Google Play Services account picker and posts the returned ID token to `controller=auth&action=googleTokenLogin`. That route must be added to the auth backend: verify the token against the web client ID, open the PHP session for that email and reply with the same JSON as `action=me`. Google Cloud needs an Android OAuth client with package `ai.hrcrm.app` and the SHA-1 of each signing key (`cd android && gradlew signingReport`). Until both exist the app falls back to the web flow automatically.
 
 **Session.** The CRM token (RS256 JWT, ~10 min) is cached in memory and mirrored to AsyncStorage together with the user snapshot, so the app opens straight to the right tabs. Refresh (`src/services/crmAuth.js`) tries a native `fetch` first (Android shares the WebView cookie jar) and falls back to a hidden WebView (`SessionBridge.js`) that holds the cookies.
 
@@ -72,7 +72,7 @@ Modules used: `hrc_daily_activity`, `hrc_employees`, `hrc_leaves`, `hrc_holidays
 ```
 App.js                      providers, splash, session bootstrap
 index.js                    AppRegistry entry (app name from app.json)
-android/ ios/               native projects (package ai.hrcrm.mobile)
+android/ ios/               native projects (Android package ai.hrcrm.app)
 src/config.js               URLs and .env keys
 src/services/               crmAuth (token), crmClient (axios + interceptors), api (http / fetchGpc), googleAuth, storage
 src/api/                    one module per feature, ported from the web app

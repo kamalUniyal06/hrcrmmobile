@@ -6,7 +6,7 @@
  * replies with the same JSON as `action=me` (user, userInfo, crm_access_token).
  *
  * Google Cloud setup (same project as the web login):
- *   - OAuth client of type Android: package `ai.hrcrm.mobile` + the SHA-1 of each
+ *   - OAuth client of type Android: package `ai.hrcrm.app` + the SHA-1 of each
  *     signing key (`cd android && gradlew signingReport`).
  *   - OAuth client of type Web: its ID goes in .env as GOOGLE_WEB_CLIENT_ID.
  *
@@ -35,11 +35,18 @@ export async function signInWithGoogleNative() {
   configure();
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // Forget the last account so the picker always appears instead of reusing it.
+    try {
+      await GoogleSignin.signOut();
+    } catch {
+      // Nothing was signed in.
+    }
     const response = await GoogleSignin.signIn();
     if (!isSuccessResponse(response)) return { status: "cancelled" };
     const idToken = response.data?.idToken;
-    if (!idToken) return { status: "fallback", reason: "Google did not return an ID token." };
-    return exchangeIdToken(idToken);
+    const email = response.data?.user?.email || null;
+    if (!idToken) return { status: "fallback", reason: "Google did not return an ID token.", email };
+    return exchangeIdToken(idToken, email);
   } catch (error) {
     if (isErrorWithCode(error)) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) return { status: "cancelled" };
@@ -51,7 +58,9 @@ export async function signInWithGoogleNative() {
   }
 }
 
-async function exchangeIdToken(idToken) {
+// `email` (the account picked in the dialog) rides along on a fallback so the web
+// login can go straight to that account instead of asking again.
+async function exchangeIdToken(idToken, email) {
   let response;
   try {
     response = await fetch(GOOGLE_TOKEN_LOGIN_URL, {
@@ -61,7 +70,7 @@ async function exchangeIdToken(idToken) {
       body: JSON.stringify({ id_token: idToken }),
     });
   } catch (error) {
-    return { status: "fallback", reason: error.message || "Could not reach the HRCRM server." };
+    return { status: "fallback", reason: error.message || "Could not reach the HRCRM server.", email };
   }
   let data = null;
   try {
@@ -72,13 +81,15 @@ async function exchangeIdToken(idToken) {
   if (response.ok && data?.crm_access_token) return { status: "ok", data };
   const message = data?.error || data?.message || `The server replied ${response.status}.`;
   if (/invalid auth route/i.test(message)) {
-    return { status: "fallback", reason: "The HRCRM backend has no googleTokenLogin route yet." };
+    return { status: "fallback", reason: "The HRCRM backend has no googleTokenLogin route yet.", email };
   }
   return { status: "error", reason: message };
 }
 
 export async function signOutGoogleNative() {
-  if (!configured) return;
+  // After an app restart nothing has configured the SDK yet, but the account is still remembered.
+  if (!nativeGoogleAvailable()) return;
+  configure();
   try {
     await GoogleSignin.signOut();
   } catch {

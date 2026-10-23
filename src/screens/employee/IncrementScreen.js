@@ -81,10 +81,10 @@ export default function IncrementScreen() {
             <ErrorState message={pending.error.message} onRetry={() => pending.refetch()} />
           ) : currentQuestion ? (
             <Card>
-              <Chip label={`Question ${pending.data.questions.length - pending.data.pendingQuestions.length + 1} of ${pending.data.questions.length}`} tone="progress" small />
+              <Chip label={`Question ${pending.data.questions.length - pending.data.pendingQuestions.length + 1} of ${pending.data.questions.length}`} tone="progress" small style={{ alignSelf: "flex-start" }} />
               <Text style={type.subheading}>{questionText(currentQuestion)}</Text>
               <Field value={answer} onChangeText={setAnswer} placeholder="Type your answer" multiline />
-              <Row>
+              <Row style={{ flexWrap: "wrap" }}>
                 <Button title="Save answer" icon="checkmark" loading={reply.isPending} disabled={!clean(answer)} onPress={() => reply.mutate({ questionId: currentQuestion.id })} />
                 <Button title="Finish later" variant="ghost" onPress={() => toast.info("Your request is saved. Come back any time to finish.")} />
               </Row>
@@ -115,7 +115,7 @@ export default function IncrementScreen() {
         ) : (
           history.data.map((record) => (
             <Card key={record.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <View>
+              <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={type.subheading}>₹ {money(record.description)}</Text>
                 <Text style={type.small}>Requested {formatDate(record.date_entered)}</Text>
               </View>

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore, selectEmail, selectUserId } from "../store/authStore";
 import { toast } from "../store/toastStore";
-import { getDailyActivity, getMyActivityRange, markActivity } from "../api/dailyActivity.api";
+import { getDailyActivity, getMyActivityRange } from "../api/dailyActivity.api";
 import { fetchAttendanceLimits } from "../api/limits.api";
 import { getMyEmployeeRecord, getMyLeaves, getPublicHolidays } from "../api/leaves.api";
 import { createSystemAlertResponse, fetchPendingSystemAlerts, fetchSystemAlerts } from "../api/systemAlerts.api";
@@ -48,20 +48,6 @@ export const useMyActivityRange = ({ from, to }) => {
     staleTime: FIVE_MINUTES,
   });
 };
-
-const ACTIVITY_LABELS = { login: "Clocked in", lunch_in: "Lunch started", lunch_out: "Back from lunch", logout: "Clocked out" };
-
-export function useMarkActivity() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (action) => markActivity(action),
-    onSuccess: (_, action) => {
-      toast.success(ACTIVITY_LABELS[action] || "Saved");
-      queryClient.invalidateQueries({ queryKey: keys.dailyActivity });
-    },
-    onError: (error) => toast.error(errorMessage(error, "Could not update your attendance.")),
-  });
-}
 
 export const useMyEmployeeRecord = () => {
   const email = useEmail();

@@ -2,7 +2,8 @@ import {
   calendarDateKey, eachDay, employeeDateKey, formatDate, formatHours, interviewDate, nowStampInIndia, parseActivityTime, timeUntil,
 } from '../src/utils/dates';
 import { daySummary, employeeAttendanceStats, holidayMapOf, leaveDaysOf, sessionSummary, timeToMinutes } from '../src/utils/attendance';
-import { activeRecords, errorMessage, fetchAllPages, fullName, initials, plainText, totalPagesOf } from '../src/utils/records';
+import { activeRecords, errorMessage, fetchAllPages, fullName, htmlBlocks, initials, plainText, totalPagesOf } from '../src/utils/records';
+import { emailFromIdToken, withAccountChooser } from '../src/utils/oauthUrl';
 
 describe('dates', () => {
   test('parses CRM MM/DD/YYYY HH:mm timestamps', () => {
@@ -59,6 +60,10 @@ describe('attendance', () => {
 describe('records', () => {
   test('helpers', () => {
     expect(plainText('<p>Hello&nbsp;<b>world</b> &amp; co</p>')).toBe('Hello world & co');
+    expect(plainText('&lt;p&gt;Feeling &lt;b&gt;unwell&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Back Monday&lt;/p&gt;')).toBe('Feeling unwell\nBack Monday');
+    expect(plainText('&amp;lt;p&amp;gt;Twice escaped&amp;lt;/p&amp;gt;')).toBe('Twice escaped');
+    expect(plainText('<ul><li>One</li><li>Two</li></ul>')).toBe('• One\n• Two');
+    expect(plainText('It&rsquo;s &#x20B9;500 &ndash; ok')).toBe('It’s ₹500 – ok');
     expect(fullName({ first_name: ' Kamal ', last_name: 'Uniyal' })).toBe('Kamal Uniyal');
     expect(initials('Kamal Uniyal')).toBe('KU');
     expect(totalPagesOf({ total: 45, per_page: 20 }, 20)).toBe(3);
@@ -79,5 +84,52 @@ describe('records', () => {
     expect(request).toHaveBeenCalledTimes(2);
     expect(request.mock.calls[0][0]).toMatchObject({ page: 1, per_page: 50 });
     await expect(fetchAllPages(async () => ({ success: false, error: 'denied' }), { module: 'hrc_leaves' })).rejects.toThrow('denied');
+  });
+});
+
+describe('oauthUrl', () => {
+  // Shapes of the redirects the HRCRM backend actually sends.
+  const google = 'https://accounts.google.com/o/oauth2/v2/auth?response_type=code&access_type=online&client_id=abc.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fapp.hrcrm.ai%2Fcb&state=s1&scope=email%20profile&approval_prompt=auto';
+  const microsoft = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=51c4&response_type=code&redirect_uri=https%3A%2F%2Fapp.hrcrm.ai%2Fmicrosoft-callback&scope=openid+email&state=s2';
+
+  test('forces the account chooser and leaves other URLs alone', () => {
+    // Google answers "Error 400: invalid_request" when approval_prompt and prompt are both sent.
+    expect(withAccountChooser(google)).toBe(google.replace('approval_prompt=auto', 'prompt=select_account'));
+    expect(withAccountChooser(microsoft)).toBe(`${microsoft}&prompt=select_account`);
+    const forced = withAccountChooser(google);
+    expect(withAccountChooser(forced)).toBe(forced); // no reload loop
+    expect(withAccountChooser('https://app.hrcrm.ai/public/index.php?controller=auth&action=me')).toBe('https://app.hrcrm.ai/public/index.php?controller=auth&action=me');
+  });
+
+  test('a login hint goes straight to the picked account', () => {
+    const hinted = withAccountChooser(google, 'a.b@example.com');
+    expect(hinted).not.toMatch(/prompt=/);
+    expect(hinted).toMatch(/login_hint=a\.b%40example\.com/);
+    expect(hinted).toMatch(/state=s1&scope=email%20profile/);
+    expect(withAccountChooser(hinted, 'a.b@example.com')).toBe(hinted);
+  });
+
+  test('reads the email from an ID token', () => {
+    // eslint-disable-next-line no-undef -- Node's Buffer, available in Jest.
+    const part = (value) => Buffer.from(JSON.stringify(value)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+    expect(emailFromIdToken(`${part({ alg: 'none' })}.${part({ preferred_username: 'kamal@outright.com' })}.sig`)).toBe('kamal@outright.com');
+    expect(emailFromIdToken('not-a-token')).toBeNull();
+  });
+});
+
+describe('htmlBlocks', () => {
+  test('keeps tables as tables and the text around them as paragraphs', () => {
+    const html = '<p>Dear All,</p><p>Teams are below.</p><table><tr><th>Team</th><th>Members</th></tr><tr><td>Team A</td><td>Kamal, Shashi</td></tr><tr><td>Team B</td><td>Ravi</td></tr></table><p>All the best!</p>';
+    expect(htmlBlocks(html)).toEqual([
+      { type: 'text', text: 'Dear All,\nTeams are below.' },
+      { type: 'table', header: ['Team', 'Members'], rows: [['Team A', 'Kamal, Shashi'], ['Team B', 'Ravi']] },
+      { type: 'text', text: 'All the best!' },
+    ]);
+  });
+
+  test('reads CRM-escaped tables and uses the first row as header when there is no <th>', () => {
+    const escaped = '&lt;table&gt;&lt;tr&gt;&lt;td&gt;Team&lt;/td&gt;&lt;td&gt;Lead&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Red&lt;/td&gt;&lt;td&gt;Asha&amp;nbsp;K&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;';
+    expect(htmlBlocks(escaped)).toEqual([{ type: 'table', header: ['Team', 'Lead'], rows: [['Red', 'Asha K']] }]);
+    expect(htmlBlocks('<p>Just text</p>')).toEqual([{ type: 'text', text: 'Just text' }]);
   });
 });
