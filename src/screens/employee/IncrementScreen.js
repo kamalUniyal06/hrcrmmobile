@@ -66,7 +66,7 @@ export default function IncrementScreen() {
     <Screen>
       <Card style={{ backgroundColor: colors.sidebar, borderColor: colors.sidebar }}>
         <Text style={[type.tiny, { color: colors.lime }]}>Current annual salary</Text>
-        <Text style={[type.title, { color: "#fff", fontSize: 30 }]}>{salary.isPending ? "…" : `₹ ${money(salary.data?.amount)}`}</Text>
+        <Text style={[type.title, { color: "#fff", fontSize: 30, lineHeight: 38 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{salary.isPending ? "…" : `₹ ${money(salary.data?.amount)}`}</Text>
         <Text style={[type.small, { color: "rgba(255,255,255,0.7)" }]}>
           {salary.data?.isFallback ? "No salary record found; showing a reference amount." : `₹ ${money(salary.data?.monthlyAmount)} per month`}
         </Text>
@@ -81,10 +81,10 @@ export default function IncrementScreen() {
             <ErrorState message={pending.error.message} onRetry={() => pending.refetch()} />
           ) : currentQuestion ? (
             <Card>
-              <Chip label={`Question ${pending.data.questions.length - pending.data.pendingQuestions.length + 1} of ${pending.data.questions.length}`} tone="progress" small style={{ alignSelf: "flex-start" }} />
+              <Chip label={`Question ${pending.data.questions.length - pending.data.pendingQuestions.length + 1} of ${pending.data.questions.length}`} tone="progress" small style={{ alignSelf: "flex-start", maxWidth: "100%" }} />
               <Text style={type.subheading}>{questionText(currentQuestion)}</Text>
               <Field value={answer} onChangeText={setAnswer} placeholder="Type your answer" multiline />
-              <Row style={{ flexWrap: "wrap" }}>
+              <Row style={{ flexWrap: "wrap", columnGap: 8, rowGap: 8 }}>
                 <Button title="Save answer" icon="checkmark" loading={reply.isPending} disabled={!clean(answer)} onPress={() => reply.mutate({ questionId: currentQuestion.id })} />
                 <Button title="Finish later" variant="ghost" onPress={() => toast.info("Your request is saved. Come back any time to finish.")} />
               </Row>
@@ -114,12 +114,12 @@ export default function IncrementScreen() {
           <EmptyState icon="trending-up-outline" title="No requests yet" message="Your increment requests will be listed here." />
         ) : (
           history.data.map((record) => (
-            <Card key={record.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Card key={record.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={type.subheading}>₹ {money(record.description)}</Text>
+                <Text style={type.subheading} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>₹ {money(record.description)}</Text>
                 <Text style={type.small}>Requested {formatDate(record.date_entered)}</Text>
               </View>
-              <Chip label={record.id === incrementId ? "In progress" : "Submitted"} tone={record.id === incrementId ? "attention" : "progress"} />
+              <Chip label={record.id === incrementId ? "In progress" : "Submitted"} tone={record.id === incrementId ? "attention" : "progress"} style={{ flexShrink: 0, maxWidth: "45%" }} />
             </Card>
           ))
         )}

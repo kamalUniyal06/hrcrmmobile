@@ -59,9 +59,9 @@ function Group({ title, rounds, empty }) {
       <SectionTitle title={title} />
       {rounds.length === 0 ? <Text style={type.small}>{empty}</Text> : rounds.map(({ record, date, status }) => (
         <Card key={record.id}>
-          <Row style={{ justifyContent: "space-between" }}>
+          <Row style={{ justifyContent: "space-between" }} align="flex-start">
             <Text style={[type.heading, { flex: 1, minWidth: 0 }]} numberOfLines={2}>{record.round}</Text>
-            <Chip label={status.label} tone={status.tone} small />
+            <Chip label={status.label} tone={status.tone} small style={{ flexShrink: 0, maxWidth: "45%", marginTop: 3 }} />
           </Row>
           {record.jobTitle ? <Text style={type.small}>{record.jobTitle}</Text> : null}
           <Text style={type.body}>{date ? `${formatDateTime(record.scheduledAt)}` : "Date to be confirmed by HR"}</Text>

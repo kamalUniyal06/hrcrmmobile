@@ -21,12 +21,12 @@ export default function MonthCalendar({ year, month, onPrev, onNext, markers = {
     <View style={styles.wrap}>
       <View style={styles.header}>
         <Pressable onPress={onPrev} hitSlop={10} style={styles.navButton}><Ionicons name="chevron-back" size={18} color={colors.foreground} /></Pressable>
-        <Text style={type.subheading}>{monthLabel(year, month)}</Text>
+        <Text style={[type.subheading, styles.monthTitle]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{monthLabel(year, month)}</Text>
         <Pressable onPress={onNext} hitSlop={10} style={styles.navButton}><Ionicons name="chevron-forward" size={18} color={colors.foreground} /></Pressable>
       </View>
       <View style={styles.weekRow}>
         {WEEKDAY_LABELS.map((label) => (
-          <Text key={label} style={styles.weekday}>{label}</Text>
+          <Text key={label} style={styles.weekday} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{label}</Text>
         ))}
       </View>
       <View style={styles.grid}>
@@ -42,7 +42,7 @@ export default function MonthCalendar({ year, month, onPrev, onNext, markers = {
           return (
             <Pressable key={key} disabled={disabled || !onSelectDay} onPress={() => onSelectDay?.(key)} style={styles.cell}>
               <View style={[styles.day, { backgroundColor: bg }, key === today && !isEdge && styles.today]}>
-                <Text style={[styles.dayText, { color: fg }]}>{date.getDate()}</Text>
+                <Text style={[styles.dayText, { color: fg }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{date.getDate()}</Text>
               </View>
             </Pressable>
           );
@@ -53,7 +53,7 @@ export default function MonthCalendar({ year, month, onPrev, onNext, markers = {
           {legend.map((item) => (
             <View key={item.label} style={styles.legendItem}>
               <View style={[styles.swatch, { backgroundColor: markerColor(item.tone) }]} />
-              <Text style={type.small}>{item.label}</Text>
+              <Text style={[type.small, { flexShrink: 1 }]}>{item.label}</Text>
             </View>
           ))}
         </View>
@@ -71,16 +71,17 @@ function markerText(tone) {
 
 const styles = StyleSheet.create({
   wrap: { gap: 8 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  navButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  monthTitle: { flex: 1, minWidth: 0, textAlign: "center" },
+  navButton: { flexShrink: 0, width: 32, height: 32, borderRadius: 16, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" },
   weekRow: { flexDirection: "row" },
-  weekday: { flex: 1, textAlign: "center", fontSize: 11, fontWeight: "600", color: colors.mutedForeground },
+  weekday: { flex: 1, textAlign: "center", fontSize: 11, lineHeight: 15, fontWeight: "600", color: colors.mutedForeground },
   grid: { flexDirection: "row", flexWrap: "wrap" },
   cell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 2 },
   day: { flex: 1, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
   today: { borderWidth: 1.5, borderColor: colors.primary },
-  dayText: { fontSize: 13, fontWeight: "500" },
+  dayText: { fontSize: 13, lineHeight: 17, fontWeight: "500" },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 4 },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  swatch: { width: 12, height: 12, borderRadius: 4 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
+  swatch: { flexShrink: 0, width: 12, height: 12, borderRadius: 4 },
 });

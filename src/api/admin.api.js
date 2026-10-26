@@ -2,12 +2,21 @@
 // Web sources: pages/candidates/candidatesApi.js + candidateList.js, pages/employees/employeesApi.js,
 // pages/interviews/interviewUtils.js, employement/api/resignation.api.js.
 import { gateway } from "../services/api";
-import { activeRecords, assertSuccess, clean, fetchAllPages, lower, totalPagesOf } from "../utils/records";
+import { activeRecords, assertSuccess, clean, fetchAllPages, lower, plainText, totalPagesOf } from "../utils/records";
 import { interviewDate } from "../utils/dates";
 
 export const candidatePageSize = 20;
 
+// Same columns the web searches (candidateList.js candidateSearchFields).
+export const candidateSearchFields = ["first_name", "last_name", "phone_mobile", "current_designation", "title", "department"];
+
+/**
+ * Web buildCandidateListRequest: assigned, non-employee candidates, newest first, 20 per page.
+ * An email is matched exactly through `email1` (it isn't a searchable column); other text goes
+ * to the gateway search. The shortlist request carries no search, like the web.
+ */
 export function buildCandidateListRequest({ page = 1, orderBy = "date_entered", orderDir = "DESC", shortlistedOnly = false, search = "" } = {}) {
+  const term = clean(search);
   return {
     action: "fetch",
     module: "hrc_candidates",
@@ -19,9 +28,10 @@ export function buildCandidateListRequest({ page = 1, orderBy = "date_entered", 
             hrc_stages_id_c: { nin: ["", "Unassigned"] },
             hrc_phase_id: { nin: ["", "Unassigned"] },
             hrc_status_id_c: { nin: ["", "Unassigned"] },
+            ...(term.includes("@") ? { email1: term } : {}),
           }),
     },
-    ...(clean(search) ? { search: clean(search), search_fields: ["first_name", "last_name", "email1", "full_name"] } : {}),
+    ...(!shortlistedOnly && term && !term.includes("@") ? { search: term, search_fields: candidateSearchFields } : {}),
     order_by: orderBy,
     order_dir: orderDir,
     page,
@@ -37,6 +47,21 @@ export async function fetchCandidatePage(options) {
   return { records: response.records.filter((r) => String(r.deleted) !== "1"), total, page: Number(response.page) || body.page, pages: totalPagesOf(response, candidatePageSize) };
 }
 
+/**
+ * Every candidate added between two "YYYY-MM-DD" days, with the "All" list's filters so counts match
+ * (web: homeDashboard.queries useCandidatesForRange → fetchAllRecords, 100 per page).
+ */
+export const fetchCandidatesForRange = async ({ from, to }) =>
+  (await fetchAllPages(gateway, {
+    action: "fetch",
+    module: "hrc_candidates",
+    date_range: "custom",
+    date_field: "date_entered",
+    date_from: `${from} 00:00:00`,
+    date_to: `${to} 23:59:59`,
+    filters: buildCandidateListRequest().filters,
+  })).records;
+
 export async function fetchCandidateRecord(id) {
   const response = assertSuccess(
     await gateway({ action: "fetch", module: "hrc_candidates", filters: { id }, page: 1, per_page: 1 }),
@@ -47,12 +72,13 @@ export async function fetchCandidateRecord(id) {
   return record;
 }
 
+// CRM text can arrive as (escaped) HTML, so everything shown is converted to plain text.
 export const candidateName = (record) =>
-  [record.first_name, record.last_name].filter(Boolean).join(" ") || record.full_name || record.name || "Unnamed candidate";
+  plainText([record.first_name, record.last_name].filter(Boolean).join(" ") || record.full_name || record.name) || "Unnamed candidate";
 
-export const candidateStage = (record) => clean(record.hrc_stages_id_c_name || record.stage_name || record.stage) || "Unassigned";
-export const candidatePhase = (record) => clean(record.hrc_phase_id_name || record.hrc_phase_name || record.phase_name || record.phase) || "Unassigned";
-export const candidateStatus = (record) => clean(record.hrc_status_id_c_name || record.status_name || record.status) || "Unassigned";
+export const candidateStage = (record) => plainText(record.hrc_stages_id_c_name || record.stage_name || record.stage) || "Unassigned";
+export const candidatePhase = (record) => plainText(record.hrc_phase_id_name || record.hrc_phase_name || record.phase_name || record.phase) || "Unassigned";
+export const candidateStatus = (record) => plainText(record.hrc_status_id_c_name || record.status_name || record.status) || "Unassigned";
 
 export async function fetchCandidateInterviews(candidateId) {
   const { records } = await fetchAllPages(gateway, { action: "fetch_related", module: "hrc_candidates", id: candidateId, related_module: "hrc_interviews" }, { perPage: 20 });
@@ -78,11 +104,42 @@ export async function fetchEmployee(id) {
   return record;
 }
 
+/** Create (no id) or update an employee. Web: employeesApi.saveEmployee. */
+export async function saveEmployee(id, data) {
+  const response = await gateway({ action: id ? "update" : "create", module: "hrc_employees", ...(id ? { id } : {}), data });
+  if (response?.success !== true) throw new Error(response?.message || response?.error || "Could not save employee. Please retry.");
+  return response;
+}
+
+export const employeeDepartment = (record) => clean(record.department) || clean(record.hrc_departments_hrc_employees_1_name);
+export const employeePhone = (record) => clean(record.phone_mobile) || clean(record.phone_work);
+export const employeeDesignation = (record) => clean(record.current_designation) || clean(record.title);
+
+/** Stored joining dates are DD/MM/YYYY; returns "YYYY-MM-DD" (or the first 10 characters as stored). */
+export function employeeDate(value = "") {
+  const text = String(value ?? "").trim();
+  const match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : text.slice(0, 10);
+}
+
+/** Time since joining, e.g. "2y 3m"; empty for missing or future dates. */
+export function tenure(value) {
+  const match = employeeDate(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  const now = new Date();
+  let months = (now.getFullYear() - Number(match[1])) * 12 + now.getMonth() - (Number(match[2]) - 1);
+  if (now.getDate() < Number(match[3])) months -= 1;
+  if (months < 0) return "";
+  if (months < 1) return "New joiner";
+  const years = Math.floor(months / 12);
+  return [years && `${years}y`, months % 12 && `${months % 12}m`].filter(Boolean).join(" ");
+}
+
 export const isExEmployee = (employee) => clean(employee.stage_id_name) === "Ex Employee" && clean(employee.hrc_phase_id_name) === "Exit";
 
 // ─── Interviews (board) ───────────────────────────────────────────────────────
 
-export const roundName = (record) => clean(record.description).replace(/\s+/g, " ") || "Unspecified round";
+export const roundName = (record) => plainText(record.description).replace(/\s+/g, " ") || "Unspecified round";
 export const hasOutcome = (record) => ["pass", "passed", "fail", "failed"].includes(lower(record.interview_status));
 export const isPassed = (record) => /^(pass|passed)$/i.test(clean(record.interview_status));
 const candidateIdOf = (record) => clean(record.candidate_id) || clean(record.hrc_candidates_hrc_interviews_1hrc_candidates_ida);

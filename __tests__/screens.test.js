@@ -24,6 +24,13 @@ import { JobDetailScreen, JobsScreen } from '../src/screens/candidate/JobsScreen
 import InterviewsScreen from '../src/screens/candidate/InterviewsScreen';
 import { CandidateProfileEditScreen, CandidateProfileScreen } from '../src/screens/candidate/CandidateProfileScreen';
 import AdminHomeScreen from '../src/screens/admin/AdminHomeScreen';
+import AdminAttendanceScreen from '../src/screens/admin/AdminAttendanceScreen';
+import { SalariesScreen } from '../src/screens/admin/SalariesScreen';
+import { LimitManagementScreen } from '../src/screens/admin/LimitManagementScreen';
+import { JobPostingsScreen } from '../src/screens/admin/JobPostingsScreen';
+import { EntityListScreen } from '../src/screens/admin/EntityScreens';
+import AdminDrawer from '../src/components/AdminDrawer';
+import { useDrawerStore } from '../src/store/drawerStore';
 import { LeaveApprovalsScreen, LeaveDetailScreen } from '../src/screens/admin/LeaveApprovalsScreen';
 import { CandidateDetailScreen, CandidatesScreen } from '../src/screens/admin/CandidatesScreen';
 import { EmployeeDetailScreen, EmployeesScreen } from '../src/screens/admin/EmployeesScreen';
@@ -189,7 +196,11 @@ describe('admin screens', () => {
   beforeEach(() => signIn('admin'));
 
   test.each([
-    ['Home', () => <AdminHomeScreen navigation={navigation} />, 'HR dashboard'],
+    ['Home', () => <AdminHomeScreen navigation={navigation} />, 'Needs attention today'],
+    ['Attendance', () => <AdminAttendanceScreen navigation={navigation} route={route()} />, 'Kamal Uniyal'],
+    ['Salaries', () => <SalariesScreen navigation={navigation} route={route()} />, 'Total offered salary'],
+    ['LimitManagement', () => <LimitManagementScreen navigation={navigation} route={route()} />, 'Login Delay'],
+    ['JobPostings', () => <JobPostingsScreen navigation={navigation} route={route()} />, 'Frontend Developer'],
     ['Approvals', () => <LeaveApprovalsScreen navigation={navigation} />, 'Kamal Uniyal'],
     ['LeaveDetail', () => <LeaveDetailScreen navigation={navigation} route={route({ id: 'l1' })} />, 'Approve'],
     ['Candidates', () => <CandidatesScreen navigation={navigation} />, 'Asha Rao'],
@@ -206,10 +217,56 @@ describe('admin screens', () => {
     expect(textOf(tree)).toContain(expected);
   });
 
+  test('Home shows the hiring, increment, schedule and feed cards', async () => {
+    const { tree } = mount(<AdminHomeScreen navigation={navigation} />);
+    await settle();
+    const text = textOf(tree);
+    expect(text).toContain('Hiring pipeline');
+    expect(text).toContain('Asha Rao');
+    expect(text).toContain('Increment requests');
+    expect(text).toContain('Upcoming');
+    expect(text).toContain('Announcements');
+    // The tasks & activity card opens on "Upcoming tasks" (sample data, like the web); switch to the activity log.
+    expect(text).toContain('Tasks & activity');
+    expect(text).toContain('Sample data');
+    const activityTab = tree.root.findAll((node) => node.props.children === 'Activity log')[0];
+    let pressable = activityTab;
+    while (pressable && typeof pressable.props.onPress !== 'function') pressable = pressable.parent;
+    await act(async () => { pressable.props.onPress(); });
+    expect(textOf(tree)).toContain('Kamal Uniyal checked in');
+    // The month's candidates are fetched with the "All" list filters, 100 per page, like the web.
+    expect(gateway).toHaveBeenCalledWith(expect.objectContaining({
+      module: 'hrc_candidates', date_range: 'custom', date_field: 'date_entered', per_page: 100,
+      filters: expect.objectContaining({ employee: 0, hrc_stages_id_c: { nin: ['', 'Unassigned'] } }),
+    }));
+  });
+
   test('screens show an error state when the gateway fails', async () => {
     gateway.mockRejectedValue(new Error('Gateway down'));
     const { tree } = mount(<LeaveApprovalsScreen navigation={navigation} />);
     await settle();
     expect(textOf(tree)).toContain('Gateway down');
+  });
+});
+
+describe('admin navigation', () => {
+  beforeEach(() => signIn('admin'));
+
+  test('the side menu falls back to the standard menu when the layout cannot load', async () => {
+    useDrawerStore.setState({ open: true });
+    const { tree } = mount(<AdminDrawer />);
+    await settle();
+    const text = textOf(tree);
+    expect(text).toContain('Showing the standard menu');
+    expect(text).toContain('Salary management');
+    expect(text).toContain('kamal@example.com');
+    useDrawerStore.setState({ open: false });
+  });
+
+  test('a CRM module list mounts for any sidebar module', async () => {
+    const nav = { ...navigation, setOptions: jest.fn(), addListener: jest.fn(() => () => {}) };
+    const { tree } = mount(<EntityListScreen navigation={nav} route={route({ module: 'hrc_skills', title: 'Skills' })} />, { headerShown: true });
+    await settle();
+    expect(tree.toJSON()).toBeTruthy();
   });
 });

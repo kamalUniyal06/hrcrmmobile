@@ -34,11 +34,11 @@ export default function LeaveScreen({ navigation }) {
       {/* Brand-blue banner with the Apply action. */}
       <View style={styles.hero}>
         <View style={styles.heroGlow} />
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.heroTitle}>Leave</Text>
           <Text style={styles.heroSubtitle}>Balances, requests and upcoming holidays.</Text>
         </View>
-        <Button title="Apply" icon="add" small variant="lime" onPress={() => navigation.navigate("ApplyLeave")} />
+        <Button title="Apply" icon="add" small variant="lime" onPress={() => navigation.navigate("ApplyLeave")} style={{ flexShrink: 0 }} />
       </View>
 
       <View style={styles.section}>
@@ -50,7 +50,7 @@ export default function LeaveScreen({ navigation }) {
         ) : balances.length === 0 ? (
           <EmptyState icon="calendar-outline" title="No leave balance found" message="Ask HR to set up your leave balance." />
         ) : (
-          <Row align="stretch">
+          <Row align="stretch" style={styles.balanceRow}>
             {balances.map((item) => {
               const look = item.type === "Sick Leave" ? BALANCE_LOOK.sick : BALANCE_LOOK.annual;
               return (
@@ -58,7 +58,7 @@ export default function LeaveScreen({ navigation }) {
                   <View style={[styles.balanceIcon, { backgroundColor: look.iconBg }]}>
                     <Ionicons name={item.type === "Sick Leave" ? "thermometer" : "sunny"} size={18} color={look.fg} />
                   </View>
-                  <Text style={styles.balanceValue}>{item.available}</Text>
+                  <Text style={styles.balanceValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{item.available}</Text>
                   <Text style={type.subheading}>{item.type}</Text>
                   <Text style={type.small}>{item.hint}</Text>
                 </View>
@@ -91,19 +91,19 @@ export default function LeaveScreen({ navigation }) {
                   <Ionicons name={STATUS_ICON[status]} size={18} color={tone.fg} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                  <Text style={type.subheading} numberOfLines={1}>{plainText(leave.type_of_leave || leave.leave_type) || "Leave"}</Text>
-                  <Row gap={4}>
-                    <Ionicons name="calendar-clear-outline" size={12} color={colors.mutedForeground} />
-                    <Text style={[type.small, { flexShrink: 1 }]} numberOfLines={1}>{from === to ? from : `${from} – ${to}`}</Text>
+                  <Text style={type.subheading} numberOfLines={2}>{plainText(leave.type_of_leave || leave.leave_type) || "Leave"}</Text>
+                  <Row gap={4} align="flex-start">
+                    <Ionicons name="calendar-clear-outline" size={12} color={colors.mutedForeground} style={{ flexShrink: 0, marginTop: 3 }} />
+                    <Text style={[type.small, { flexShrink: 1, minWidth: 0 }]}>{from === to ? from : `${from} – ${to}`}</Text>
                   </Row>
                   {description ? (
                     <View style={styles.requestNote}>
-                      <Ionicons name="chatbubble-ellipses-outline" size={13} color={colors.mutedForeground} style={{ marginTop: 2 }} />
-                      <Text style={[type.small, { flex: 1 }]} numberOfLines={3}>{description}</Text>
+                      <Ionicons name="chatbubble-ellipses-outline" size={13} color={colors.mutedForeground} style={{ flexShrink: 0, marginTop: 2 }} />
+                      <Text style={[type.small, { flex: 1, minWidth: 0 }]} numberOfLines={3}>{description}</Text>
                     </View>
                   ) : null}
                 </View>
-                <Chip label={status} tone={STATUS_TONE[status]} small />
+                <Chip label={status} tone={STATUS_TONE[status]} small style={styles.requestChip} />
               </View>
             );
           })
@@ -118,12 +118,14 @@ export default function LeaveScreen({ navigation }) {
           <Card style={styles.listCard}>
             {upcomingHolidays.map((holiday, index) => (
               <View key={holiday.id || holiday.key} style={[styles.holiday, index > 0 && styles.holidayBorder]}>
-                <DateBlock dateKey={holiday.key} tone="lime" />
+                <View style={{ flexShrink: 0 }}>
+                  <DateBlock dateKey={holiday.key} tone="lime" />
+                </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={type.subheading} numberOfLines={1}>{plainText(holiday.name) || "Public holiday"}</Text>
+                  <Text style={type.subheading} numberOfLines={2}>{plainText(holiday.name) || "Public holiday"}</Text>
                   <Text style={type.small}>{formatDate(holiday.key, { weekday: true })}</Text>
                 </View>
-                <Ionicons name="gift-outline" size={18} color={colors.oliveLime} />
+                <Ionicons name="gift-outline" size={18} color={colors.oliveLime} style={{ flexShrink: 0 }} />
               </View>
             ))}
           </Card>
@@ -144,15 +146,17 @@ const BALANCE_LOOK = {
 const styles = StyleSheet.create({
   section: { gap: 10 },
   hero: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.navy, borderRadius: radius.lg, padding: 18, overflow: "hidden" },
-  heroGlow: { position: "absolute", width: 200, height: 200, borderRadius: 100, right: -70, top: -100, backgroundColor: "rgba(59,130,246,0.28)" },
+  heroGlow: { position: "absolute", width: 200, height: 200, borderRadius: 100, right: -70, top: -100, backgroundColor: "rgba(212,250,60,0.16)" },
   heroTitle: { fontSize: 24, lineHeight: 30, fontWeight: "600", letterSpacing: -0.4, color: "#FFFFFF" },
   heroSubtitle: { fontSize: 13, lineHeight: 18, color: "rgba(255,255,255,0.8)", marginTop: 2 },
-  balance: { flex: 1, gap: 2, padding: 14, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card },
+  balanceRow: { flexWrap: "wrap", columnGap: 10, rowGap: 10 },
+  balance: { flexGrow: 1, flexShrink: 1, flexBasis: 140, minWidth: 0, gap: 2, padding: 14, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card },
   balanceIcon: { width: 38, height: 38, borderRadius: radius.md, alignItems: "center", justifyContent: "center", marginBottom: 8 },
   balanceValue: { fontSize: 28, lineHeight: 34, fontWeight: "600", letterSpacing: -0.5, color: colors.navy, fontVariant: ["tabular-nums"] },
   request: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingRight: 12, paddingLeft: 16, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
   requestAccent: { position: "absolute", left: 0, top: 0, bottom: 0, width: 4 },
-  requestIcon: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  requestIcon: { flexShrink: 0, width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  requestChip: { flexShrink: 0, maxWidth: "45%", alignSelf: "center" },
   requestNote: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 4, paddingVertical: 6, paddingHorizontal: 8, borderRadius: radius.sm, backgroundColor: colors.background },
   listCard: { paddingVertical: 4, paddingHorizontal: 14, gap: 0 },
   holiday: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },

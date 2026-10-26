@@ -6,7 +6,7 @@ import { colors, type } from "../../theme";
 import { Button, Card, Chip, ErrorState, ListRow, LoadingState, Notice, PageHeader, Row, Screen, SectionTitle } from "../../components/ui";
 import { useCandidateProfile, useEmail } from "../../hooks/queries";
 import { applicationStage, fetchJobApplications, fetchJobPostings, fetchMyInterviews, hiringProgress, jobTitle, needsProfile, nextInterview } from "../../api/candidate.api";
-import { formatDateTime, interviewDate, timeUntil } from "../../utils/dates";
+import { formatDateTime, timeUntil } from "../../utils/dates";
 import { fullName, plainText } from "../../utils/records";
 import { greeting } from "../employee/EmployeeHomeScreen";
 
@@ -46,7 +46,7 @@ export default function CandidateHomeScreen({ navigation }) {
               <View style={[styles.dot, step.state === "done" && { backgroundColor: colors.lime }, step.state === "current" && { backgroundColor: colors.success }, step.state === "declined" && { backgroundColor: colors.destructive }]}>
                 {step.state === "done" ? <Ionicons name="checkmark" size={12} color={colors.foreground} /> : <Text style={styles.dotText}>{index + 1}</Text>}
               </View>
-              <Text style={[styles.stepLabel, step.state === "upcoming" && { color: "rgba(255,255,255,0.45)" }]} numberOfLines={2}>{step.label}</Text>
+              <Text style={[styles.stepLabel, step.state === "upcoming" && { color: "rgba(255,255,255,0.45)" }]} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.75}>{step.label}</Text>
             </View>
           ))}
         </View>
@@ -56,8 +56,8 @@ export default function CandidateHomeScreen({ navigation }) {
       {next ? (
         <Card tone="progress">
           <Row style={{ justifyContent: "space-between" }}>
-            <Text style={[type.subheading, { color: colors.primary, flex: 1, minWidth: 0 }]} numberOfLines={1}>Next interview</Text>
-            <Chip label={timeUntil(next.date)} tone="lime" small />
+            <Text style={[type.subheading, { color: colors.primary, flex: 1, minWidth: 0 }]} numberOfLines={2}>Next interview</Text>
+            <Chip label={timeUntil(next.date)} tone="lime" small style={styles.chip} />
           </Row>
           <Text style={type.heading}>{next.record.round}</Text>
           <Text style={type.small}>{formatDateTime(next.record.scheduledAt)}{next.record.jobTitle ? ` · ${next.record.jobTitle}` : ""}</Text>
@@ -88,7 +88,7 @@ export default function CandidateHomeScreen({ navigation }) {
                 iconTone={stage.tone}
                 title={job ? jobTitle(job) : plainText(record.name) || "Application"}
                 subtitle={stage.next}
-                right={<Chip label={stage.label} tone={stage.tone} small />}
+                right={<Chip label={stage.label} tone={stage.tone} small style={{ flexShrink: 0 }} />}
                 onPress={job ? () => navigation.navigate("Jobs", { screen: "JobDetail", params: { id: job.id } }) : undefined}
               />
             );
@@ -104,7 +104,7 @@ export default function CandidateHomeScreen({ navigation }) {
           <Text style={type.small}>No interviews scheduled yet.</Text>
         ) : (
           interviews.data.slice(0, 3).map((round) => (
-            <ListRow key={round.id} icon="people-outline" title={round.round} subtitle={round.scheduledAt ? formatDateTime(round.scheduledAt) : "Date to be confirmed"} right={<Text style={type.small}>{interviewDate(round.scheduledAt) ? "" : ""}</Text>} onPress={() => navigation.navigate("Interviews")} />
+            <ListRow key={round.id} icon="people-outline" title={round.round} subtitle={round.scheduledAt ? formatDateTime(round.scheduledAt) : "Date to be confirmed"} onPress={() => navigation.navigate("Interviews")} />
           ))
         )}
       </View>
@@ -113,9 +113,10 @@ export default function CandidateHomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  steps: { flexDirection: "row", gap: 6 },
-  step: { flex: 1, alignItems: "center", gap: 6 },
-  dot: { width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
-  dotText: { color: "#fff", fontSize: 12, fontWeight: "600" },
-  stepLabel: { color: "#fff", fontSize: 11, textAlign: "center", fontWeight: "500" },
+  steps: { flexDirection: "row", gap: 4 },
+  chip: { flexShrink: 0, maxWidth: "45%" },
+  step: { flex: 1, minWidth: 0, alignItems: "center", gap: 6 },
+  dot: { flexShrink: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
+  dotText: { color: "#fff", fontSize: 12, lineHeight: 16, fontWeight: "600" },
+  stepLabel: { alignSelf: "stretch", color: "#fff", fontSize: 11, lineHeight: 15, textAlign: "center", fontWeight: "500" },
 });

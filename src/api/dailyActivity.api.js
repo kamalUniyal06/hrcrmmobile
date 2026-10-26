@@ -3,6 +3,7 @@ import { CRM_URL, FETCH_GPC_X_API_KEY } from "../config";
 import { apiRequest, gateway } from "../services/api";
 import { currentEmail } from "../store/authStore";
 import { activeRecords, assertSuccess, fetchAllPages } from "../utils/records";
+import { buildAttendanceStatsQueries, readAttendanceStats } from "../utils/adminAttendance";
 
 export const getDailyActivity = async () => {
   const response = assertSuccess(
@@ -57,3 +58,6 @@ export const getOrgActivityForDay = async (day) => {
   });
   return records;
 };
+
+/** Overview totals for one day (admin): all, not checked in, on leave, late, on time. */
+export const fetchAttendanceStats = async (day) => readAttendanceStats(await gateway({ action: "get_stats", queries: buildAttendanceStatsQueries(day) }));

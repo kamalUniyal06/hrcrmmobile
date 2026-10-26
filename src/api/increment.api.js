@@ -84,26 +84,160 @@ export const createIncrementReply = async ({ incrementId, questionId, answer }) 
 
 export const questionText = (question) => clean(question.description) || clean(question.name) || "Untitled question";
 
-// Admin: every request with reply progress.
-export const fetchAdminIncrementOverview = async () => {
-  const [requests, questions] = await Promise.all([
-    (await fetchAllPages(gateway, { action: "fetch", module: INCREMENT_MODULE, order_by: "date_entered", order_dir: "DESC" })).records,
-    fetchIncrementQuestions(),
-  ]);
-  const ids = requests.map((r) => clean(r.id)).filter(Boolean);
-  const replies = ids.length
-    ? (await fetchAllPages(gateway, { action: "fetch", module: REPLY_MODULE, filters: { increment_id: { in: ids } } })).records
-    : [];
-  const questionIds = new Set(questions.map((q) => clean(q.id)));
-  const byRequest = new Map();
+// ─── Admin: increment management ─────────────────────────────────────────────
+// Web: employement/api/incrementAdmin.api.js + incrementAdminData.js. Request bodies match the web exactly.
+// Stored contract: request.name = employee email, request.description = requested annual salary;
+// question.name = title, question.description = text; reply.increment_id / question_id / description.
+// Current salary and approval status are not stored on a request, so neither is shown or changed here.
+
+function assertResponse(response, message) {
+  if (response?.success !== true) throw new Error(response?.error || response?.message || message);
+  return response;
+}
+
+async function loadPage(module, options = {}) {
+  const response = assertResponse(
+    await gateway({ action: "fetch", module, page: 1, per_page: 20, order_by: "date_entered", order_dir: "DESC", ...options }),
+    "Could not load increment records.",
+  );
+  if (!Array.isArray(response.records)) throw new Error("The gateway returned an invalid record collection.");
+  return {
+    ...response,
+    records: response.records.filter((record) => clean(record.deleted) !== "1"),
+    total: Number(response.total) || 0,
+    total_pages: Math.max(1, Number(response.total_pages) || 1),
+  };
+}
+
+async function loadAll(module, options = {}) {
+  const records = [];
+  let page = 1;
+  let pages = 1;
+  do {
+     
+    const response = await loadPage(module, { ...options, per_page: 200, page });
+    records.push(...response.records);
+    pages = response.total_pages;
+    page += 1;
+  } while (page <= pages);
+  return records;
+}
+
+export const fetchAdminQuestions = () => loadAll(QUESTION_MODULE, { order_dir: "ASC" });
+
+/** Requests matching an email search and submission dates ("YYYY-MM-DD"), with their replies. */
+export async function fetchAdminRequests({ search, from, to } = {}) {
+  const records = await loadAll(INCREMENT_MODULE, {
+    ...(search ? { search, search_fields: ["name"] } : {}),
+    ...(from || to ? { date_range: "custom", date_field: "date_entered", date_from: from, date_to: to } : {}),
+  });
+  const ids = records.map((record) => clean(record.id)).filter(Boolean);
+  const requestIds = new Set(ids);
+  const replies = [];
+  // Bounded ID batches; never send an empty IN filter (the gateway ignores it).
+  for (let offset = 0; offset < ids.length; offset += 200) {
+     
+    const batch = await loadAll(REPLY_MODULE, {
+      filters: { increment_id: { in: ids.slice(offset, offset + 200) } },
+      fields: ["id", "increment_id", "question_id", "description"],
+    });
+    replies.push(...batch.filter((reply) => requestIds.has(clean(reply.increment_id))));
+  }
+  return { records, replies };
+}
+
+/** Newest first: the gateway filters on the employee email. */
+export const fetchAdminRequestsByEmail = (email) => {
+  if (!email) throw new Error("An employee email is required.");
+  return loadAll(INCREMENT_MODULE, { filters: { name: email } });
+};
+
+export const fetchAdminReplies = (id) => {
+  if (!id) throw new Error("Select an increment request first.");
+  return loadAll(REPLY_MODULE, { filters: { increment_id: id }, order_dir: "ASC" });
+};
+
+export async function fetchAdminRequest(id) {
+  if (!id) throw new Error("An increment ID is required.");
+  const response = await loadPage(INCREMENT_MODULE, { filters: { id }, per_page: 1 });
+  const record = response.records.find((item) => item.id === id);
+  if (!record) throw new Error("This request is no longer available. Return to the request list and refresh.");
+  return record;
+}
+
+/** Create or update a question, then read it back to confirm the gateway kept the values. */
+export async function saveAdminQuestion(id, { name, description }) {
+  if (!clean(name) || !clean(description)) throw new Error("Enter a title and question text.");
+  const data = { name: clean(name), description: clean(description) };
+  const result = assertResponse(
+    await gateway({ action: id ? "update" : "create", module: QUESTION_MODULE, ...(id ? { id } : {}), data }),
+    "The changes could not be saved.",
+  );
+  if (!result.id || (id && clean(result.id) !== clean(id))) throw new Error("The gateway did not confirm the saved record. Refresh before retrying.");
+  const verified = await loadPage(QUESTION_MODULE, { filters: { id: result.id }, per_page: 1 });
+  const record = verified.records.find((item) => clean(item.id) === clean(result.id));
+  if (!record || Object.entries(data).some(([key, value]) => clean(record[key]) !== clean(value))) {
+    throw new Error("The gateway saved a different result. Refresh and review the record before retrying.");
+  }
+  return record;
+}
+
+export function numericAmount(value) {
+  const text = clean(value).replace(/,/g, "");
+  if (!/^\d+(?:\.\d+)?$/.test(text)) return null;
+  const number = Number(text);
+  return Number.isFinite(number) ? number : null;
+}
+
+export const requestedAnnualSalary = (record) => numericAmount(record.description);
+
+export function requestIdentity(record) {
+  const email = clean(record.name);
+  const displayName = [record.first_name, record.last_name].map(clean).filter(Boolean).join(" ");
+  return { email: email.includes("@") ? email : "", name: displayName || (email.includes("@") ? email : "Employee email unavailable") };
+}
+
+export function answerProgress(questions, replies, incrementId) {
+  const questionIds = new Set(questions.map((question) => clean(question.id)));
+  const answered = new Set(
+    replies
+      .filter((reply) => clean(reply.increment_id) === clean(incrementId) && clean(reply.description) && questionIds.has(clean(reply.question_id)))
+      .map((reply) => clean(reply.question_id)),
+  ).size;
+  return { answered, total: questionIds.size, complete: questionIds.size > 0 && answered === questionIds.size };
+}
+
+export function requestOverview(records, questions, replies) {
+  const questionIds = new Set(questions.map((question) => clean(question.id)));
+  const answersByRequest = new Map();
   for (const reply of replies) {
     if (!clean(reply.description) || !questionIds.has(clean(reply.question_id))) continue;
     const id = clean(reply.increment_id);
-    if (!byRequest.has(id)) byRequest.set(id, new Set());
-    byRequest.get(id).add(clean(reply.question_id));
+    if (!answersByRequest.has(id)) answersByRequest.set(id, new Set());
+    answersByRequest.get(id).add(clean(reply.question_id));
   }
-  return requests.map((record) => {
-    const answered = byRequest.get(clean(record.id))?.size || 0;
-    return { record, answered, total: questionIds.size, complete: questionIds.size > 0 && answered === questionIds.size };
+  const rows = records.map((record) => {
+    const answered = answersByRequest.get(clean(record.id))?.size || 0;
+    return { record, progress: { answered, total: questionIds.size, complete: questionIds.size > 0 && answered === questionIds.size } };
   });
-};
+  const complete = rows.filter((row) => row.progress.complete).length;
+  return { rows, total: rows.length, complete, awaiting: rows.length - complete };
+}
+
+export function filterRequestRows(rows, completion) {
+  if (completion === "complete") return rows.filter((row) => row.progress.complete);
+  if (completion === "awaiting") return rows.filter((row) => !row.progress.complete);
+  return rows;
+}
+
+/** Replies grouped under each question; replies to removed questions get a "missing" group. */
+export function groupAnswers(questions, replies, incrementId) {
+  const groups = new Map(questions.map((question) => [clean(question.id), { id: clean(question.id), question, replies: [], missing: false }]));
+  for (const reply of replies) {
+    if (clean(reply.increment_id) !== clean(incrementId)) continue;
+    const key = clean(reply.question_id);
+    if (!groups.has(key)) groups.set(key, { id: key, question: null, replies: [], missing: true });
+    groups.get(key).replies.push(reply);
+  }
+  return [...groups.values()];
+}

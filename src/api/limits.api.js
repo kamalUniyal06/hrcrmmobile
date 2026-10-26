@@ -1,6 +1,6 @@
 // Attendance limits (web: components/employement/attendanceLimits.js).
 import { gateway } from "../services/api";
-import { activeRecords, assertSuccess, clean } from "../utils/records";
+import { activeRecords, assertSuccess, clean, fetchAllPages } from "../utils/records";
 import { DEFAULT_LIMITS } from "../utils/attendance";
 
 const positiveNumber = (value, fallback) => {
@@ -31,3 +31,13 @@ export const fetchAttendanceLimits = async () => {
     lunchOutMinutes: positiveNumber(lunchOut?.minutes, DEFAULT_LIMITS.lunchOutMinutes),
   };
 };
+
+// Limit management admin page (web: pages/LimitManagementPage.jsx).
+export const limitListKey = ["limit-management", "list"];
+
+/** Every hrc_limit_management record, all pages (web: fetchAllRecords("hrc_limit_management")). */
+export const fetchLimitRecords = async () => (await fetchAllPages(gateway, { action: "fetch", module: "hrc_limit_management" })).records;
+
+/** Saves only the changed fields, exactly like the web editor. */
+export const updateLimitRecord = async (id, data) =>
+  assertSuccess(await gateway({ action: "update", module: "hrc_limit_management", id, data }), "Could not save this limit record.");

@@ -45,6 +45,7 @@ export function daySummary(records = [], day, today, onLeave = false, lateAfter 
     first,
     sessions,
     worked: complete ? sessions.reduce((sum, s) => sum + s.worked, 0) : null,
+    inOffice: sessions.length > 0 && sessions.every((s) => s.inOffice !== null) ? sessions.reduce((sum, s) => sum + s.inOffice, 0) : null,
     lastLogout: sessions.map((s) => s.logout).filter(Boolean).sort((a, b) => b.stamp - a.stamp)[0] || null,
   };
 }

@@ -43,15 +43,29 @@ export function Screen({ children, scroll = true, refreshing = false, onRefresh,
   );
 }
 
-export function PageHeader({ title, subtitle, eyebrow, right, dark = false }) {
+/**
+ * Page heading: optional topic `icon` in a `tone`-tinted tile, eyebrow, bold navy title and
+ * a muted description. When a native header above already shows the screen title
+ * (`showTitle` defaults to that), the title is not repeated in the page.
+ */
+export function PageHeader({ title, subtitle, eyebrow, right, dark = false, icon, tone = "progress", showTitle }) {
+  const chrome = useContext(ScreenChrome);
+  const titleInHeader = chrome.headerShown && !chrome.appHeader;
+  const withTitle = showTitle ?? !titleInHeader;
+  const palette = tones[tone] || tones.progress;
   return (
     <View style={[styles.pageHeader, dark && styles.pageHeaderDark]}>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        {eyebrow ? <Text style={[type.tiny, { color: dark ? colors.lime : colors.primary }]}>{eyebrow}</Text> : null}
-        <Text style={[type.title, dark && { color: "#fff" }]} numberOfLines={2}>{title}</Text>
-        {subtitle ? <Text style={[type.small, { marginTop: 4 }, dark && { color: "rgba(255,255,255,0.72)" }]}>{subtitle}</Text> : null}
+      {icon ? (
+        <View style={[styles.pageHeaderIcon, { backgroundColor: dark ? "rgba(255,255,255,0.12)" : palette.bg }]}>
+          <Ionicons name={icon} size={22} color={dark ? "#FFFFFF" : palette.fg} />
+        </View>
+      ) : null}
+      <View style={{ flex: 1, minWidth: 0, gap: 2, justifyContent: "center" }}>
+        {eyebrow ? <Text style={[styles.pageHeaderEyebrow, { color: dark ? colors.lime : colors.primary }]} numberOfLines={1}>{eyebrow}</Text> : null}
+        {withTitle && title ? <Text style={[styles.pageHeaderTitle, dark && { color: "#fff" }]} numberOfLines={2}>{title}</Text> : null}
+        {subtitle ? <Text style={[type.small, dark && { color: "rgba(255,255,255,0.72)" }]}>{subtitle}</Text> : null}
       </View>
-      {right}
+      {right ? <View style={styles.pageHeaderRight}>{right}</View> : null}
     </View>
   );
 }
@@ -77,8 +91,8 @@ export function SectionTitle({ title, hint, action, onAction, style }) {
       </View>
       {action ? (
         <Pressable onPress={onAction} hitSlop={8} style={({ pressed }) => [styles.actionPill, pressed && { opacity: 0.7 }]}>
-          <Text style={styles.actionPillText}>{action}</Text>
-          <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+          <Text style={styles.actionPillText} numberOfLines={1} ellipsizeMode="tail">{action}</Text>
+          <Ionicons name="chevron-forward" size={13} color={colors.primary} style={styles.noShrink} />
         </Pressable>
       ) : null}
     </View>
@@ -125,11 +139,11 @@ export function Button({ title, onPress, variant = "primary", loading = false, d
       ) : (
         <>
           {image ? (
-            <Image source={image} style={{ width: small ? 15 : 20, height: small ? 15 : 20 }} resizeMode="contain" />
+            <Image source={image} style={{ width: small ? 15 : 20, height: small ? 15 : 20, flexShrink: 0 }} resizeMode="contain" />
           ) : icon ? (
-            <Ionicons name={icon} size={small ? 15 : 18} color={palette.fg} />
+            <Ionicons name={icon} size={small ? 15 : 18} color={palette.fg} style={styles.noShrink} />
           ) : null}
-          <Text style={[styles.buttonText, small && { fontSize: 13 }, { color: palette.fg }]} numberOfLines={1}>{title}</Text>
+          <Text style={[styles.buttonText, small && { fontSize: 13, lineHeight: 18 }, { color: palette.fg }]} numberOfLines={2}>{title}</Text>
         </>
       )}
     </Pressable>
@@ -144,12 +158,13 @@ export function IconButton({ icon, onPress, color = colors.foreground, size = 20
   );
 }
 
-export function Chip({ label, tone = "neutral", icon, style, small = false }) {
+/** `numberOfLines` defaults to 1 (status-style chips); pass 2+ (or 0 for no limit) for long values. */
+export function Chip({ label, tone = "neutral", icon, style, small = false, numberOfLines = 1 }) {
   const palette = tones[tone] || tones.neutral;
   return (
     <View style={[styles.chip, { backgroundColor: palette.bg }, small && { paddingVertical: 2, paddingHorizontal: 8 }, style]}>
-      {icon ? <Ionicons name={icon} size={12} color={palette.fg} /> : null}
-      <Text style={[styles.chipText, { color: palette.fg }, small && { fontSize: 11 }]} numberOfLines={1}>{label}</Text>
+      {icon ? <Ionicons name={icon} size={12} color={palette.fg} style={styles.noShrink} /> : null}
+      <Text style={[styles.chipText, { color: palette.fg }, small && { fontSize: 11, lineHeight: 15 }]} numberOfLines={numberOfLines} ellipsizeMode="tail">{label}</Text>
     </View>
   );
 }
@@ -175,6 +190,50 @@ export function Field({ label, value, onChangeText, placeholder, multiline = fal
   );
 }
 
+/**
+ * Search box: icon, rounded field, clear button and the keyboard's "Search" key.
+ * `onSubmit` runs on the Search key (for server-side searches); lists that filter as you type only need onChangeText.
+ */
+export function SearchField({ value, onChangeText, onSubmit, placeholder = "Search", autoFocus = false, keyboardType, style }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={[styles.search, focused && styles.searchFocused, style]}>
+      <Ionicons name="search" size={18} color={focused ? colors.primary : colors.mutedForeground} style={{ flexShrink: 0 }} />
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        onSubmitEditing={() => onSubmit?.(String(value ?? "").trim())}
+        placeholder={placeholder}
+        placeholderTextColor={colors.mutedForeground}
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoFocus={autoFocus}
+        keyboardType={keyboardType}
+        returnKeyType="search"
+        clearButtonMode="never"
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        accessibilityLabel={placeholder}
+        style={styles.searchInput}
+      />
+      {value ? (
+        <Pressable
+          onPress={() => {
+            onChangeText("");
+            onSubmit?.("");
+          }}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+          style={styles.searchClear}
+        >
+          <Ionicons name="close" size={14} color={colors.card} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 /** Option picker rendered as a bottom sheet list. `options` are strings or { label, value }. */
 export function SelectField({ label, value, onChange, options, placeholder = "Select", error, style }) {
   const [open, setOpen] = useState(false);
@@ -184,11 +243,11 @@ export function SelectField({ label, value, onChange, options, placeholder = "Se
     <View style={[{ gap: 6 }, style]}>
       {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
       <Pressable onPress={() => setOpen(true)} style={[styles.input, styles.selectInput, error && { borderColor: colors.destructive }]}>
-        <Text style={[type.body, !selected && { color: colors.mutedForeground }]} numberOfLines={1}>{selected?.label || placeholder}</Text>
-        <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
+        <Text style={[type.body, styles.grow, !selected && { color: colors.mutedForeground }]} numberOfLines={2}>{selected?.label || placeholder}</Text>
+        <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} style={styles.noShrink} />
       </Pressable>
       {error ? <Text style={[type.small, { color: colors.destructive }]}>{error}</Text> : null}
-      <Sheet visible={open} onClose={() => setOpen(false)} title={label || placeholder}>
+      <Sheet visible={open} onClose={() => setOpen(false)} title={label || placeholder} scroll={false}>
         <FlatList
           data={items}
           keyExtractor={(item) => String(item.value)}
@@ -201,8 +260,8 @@ export function SelectField({ label, value, onChange, options, placeholder = "Se
               }}
               style={({ pressed }) => [styles.sheetOption, pressed && { backgroundColor: colors.muted }]}
             >
-              <Text style={[type.body, item.value === value && { color: colors.primary, fontWeight: "600" }]}>{item.label}</Text>
-              {item.value === value ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+              <Text style={[type.body, styles.grow, item.value === value && { color: colors.primary, fontWeight: "600" }]}>{item.label}</Text>
+              {item.value === value ? <Ionicons name="checkmark" size={18} color={colors.primary} style={styles.noShrink} /> : null}
             </Pressable>
           )}
         />
@@ -211,39 +270,68 @@ export function SelectField({ label, value, onChange, options, placeholder = "Se
   );
 }
 
-export function Sheet({ visible, onClose, title, children }) {
+/**
+ * Bottom sheet capped at 85% of the screen. Content is wrapped in a ScrollView so long content
+ * (or large font scales) scrolls instead of being clipped; pass `scroll={false}` when the
+ * children bring their own ScrollView / FlatList.
+ */
+export function Sheet({ visible, onClose, title, children, scroll = true }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.sheetBackdrop} onPress={onClose} />
       <View style={styles.sheet}>
         <View style={styles.sheetHandle} />
         <View style={styles.sheetHeader}>
-          <Text style={type.heading} numberOfLines={1}>{title}</Text>
+          <Text style={[type.heading, styles.grow]} numberOfLines={2}>{title}</Text>
           <IconButton icon="close" onPress={onClose} label="Close" />
         </View>
-        {children}
+        {scroll ? (
+          <ScrollView style={styles.sheetScroll} keyboardShouldPersistTaps="handled">
+            {children}
+          </ScrollView>
+        ) : children}
       </View>
     </Modal>
   );
 }
 
+/** Up to four options share the width; more than that scroll horizontally at their natural width. */
+const SEGMENT_FIT_MAX = 4;
+
 export function SegmentedControl({ options, value, onChange, style }) {
-  return (
-    <View style={[styles.segmented, style]}>
-      {options.map((option) => {
-        const item = typeof option === "string" ? { label: option, value: option } : option;
-        const active = item.value === value;
-        return (
-          <Pressable key={String(item.value)} onPress={() => onChange(item.value)} style={[styles.segment, active && styles.segmentActive]}>
-            <Text style={[styles.segmentText, active && { color: colors.foreground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-              {item.label}
-              {item.count !== undefined ? <Text style={{ color: colors.mutedForeground }}> {item.count}</Text> : null}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
+  const scrolls = options.length > SEGMENT_FIT_MAX;
+  const segments = options.map((option) => {
+    const item = typeof option === "string" ? { label: option, value: option } : option;
+    const active = item.value === value;
+    return (
+      // Label and count are separate texts: the label shrinks (then truncates), the count never does.
+      <Pressable
+        key={String(item.value)}
+        onPress={() => onChange(item.value)}
+        accessibilityState={{ selected: active }}
+        style={[styles.segment, scrolls && styles.segmentScroll, active && styles.segmentActive]}
+      >
+        <Text
+          style={[styles.segmentText, styles.segmentLabel, active && { color: colors.foreground }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          adjustsFontSizeToFit={!scrolls}
+          minimumFontScale={0.7}
+        >
+          {item.label}
+        </Text>
+        {item.count !== undefined ? <Text style={[styles.segmentText, styles.segmentCount]} numberOfLines={1}>{item.count}</Text> : null}
+      </Pressable>
+    );
+  });
+  if (scrolls) {
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.segmented, styles.segmentedScroll, style]} contentContainerStyle={styles.segmentedScrollContent}>
+        {segments}
+      </ScrollView>
+    );
+  }
+  return <View style={[styles.segmented, style]}>{segments}</View>;
 }
 
 /* ── Data display ───────────────────────────────────────────────────────── */
@@ -258,12 +346,12 @@ export function ListRow({ title, subtitle, meta, right, icon, iconTone = "progre
         </View>
       ) : null}
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={type.subheading} numberOfLines={1}>{title}</Text>
+        <Text style={type.subheading} numberOfLines={2}>{title}</Text>
         {subtitle ? <Text style={type.small} numberOfLines={2}>{subtitle}</Text> : null}
-        {meta ? <Text style={[type.small, { marginTop: 2 }]} numberOfLines={1}>{meta}</Text> : null}
+        {meta ? <Text style={[type.small, { marginTop: 2 }]} numberOfLines={2} ellipsizeMode="tail">{meta}</Text> : null}
       </View>
-      {right}
-      {onPress && !right ? <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} /> : null}
+      {right ? <View style={styles.listRowRight}>{right}</View> : null}
+      {onPress && !right ? <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} style={styles.noShrink} /> : null}
     </>
   );
   if (onPress) {
@@ -272,24 +360,51 @@ export function ListRow({ title, subtitle, meta, right, icon, iconTone = "progre
   return <View style={[styles.listRow, style]}>{content}</View>;
 }
 
-export function Avatar({ name, size = 40, uri }) {
+// Pastel initials, picked from the name so a person keeps their colour across screens (web attendance/offboarding lists).
+const AVATAR_TONES = [
+  { bg: "#E7F2EC", fg: "#09533D" },
+  { bg: "#FDECEA", fg: "#C2410C" },
+  { bg: "#EEF2FF", fg: "#4338CA" },
+  { bg: "#FEF3C7", fg: "#B45309" },
+  { bg: "#E0F2FE", fg: "#0369A1" },
+  { bg: "#F0FBC9", fg: "#4D5E0A" },
+];
+const avatarTone = (name = "") => AVATAR_TONES[[...String(name)].reduce((sum, char) => sum + char.charCodeAt(0), 0) % AVATAR_TONES.length];
+
+export function Avatar({ name, size = 40, style }) {
+  const tone = avatarTone(name);
   return (
-    <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
-      <Text style={{ color: colors.lime, fontWeight: "600", fontSize: size * 0.38 }}>{initials(name)}</Text>
+    <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: tone.bg }, style]}>
+      <Text style={{ color: tone.fg, fontWeight: "600", fontSize: size * 0.36, lineHeight: size * 0.46 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{initials(name)}</Text>
     </View>
   );
 }
 
+/**
+ * Web home stat card, stacked for phone width: tinted icon square (and a chevron when it opens
+ * something) on top, then the value, label and hint, each on its own line so nothing is cut off.
+ */
 export function StatTile({ label, value, hint, tone = "progress", icon, onPress, style }) {
   const palette = tones[tone] || tones.progress;
   return (
     <Card onPress={onPress} style={[styles.statTile, style]}>
-      <Row style={{ justifyContent: "space-between" }}>
-        <Text style={type.small} numberOfLines={1}>{label}</Text>
-        {icon ? <Ionicons name={icon} size={16} color={palette.fg} /> : null}
-      </Row>
-      <Text style={styles.statValue}>{value ?? "—"}</Text>
-      {hint ? <Text style={[type.small, { fontSize: 12 }]} numberOfLines={1}>{hint}</Text> : null}
+      {icon || onPress ? (
+        <View style={styles.statRow}>
+          {icon ? (
+            <View style={[styles.statIcon, { backgroundColor: palette.bg }]}>
+              <Ionicons name={icon} size={18} color={palette.fg} />
+            </View>
+          ) : <View />}
+          {onPress ? (
+            <View style={styles.statChevron}>
+              <Ionicons name="chevron-forward" size={14} color={colors.mutedForeground} />
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+      <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value ?? "—"}</Text>
+      <Text style={styles.statLabel} numberOfLines={2}>{label}</Text>
+      {hint ? <Text style={styles.statHint} numberOfLines={2}>{hint}</Text> : null}
     </Card>
   );
 }
@@ -298,8 +413,8 @@ export function KeyValue({ label, value, last = false }) {
   if (value === undefined || value === null || value === "") return null;
   return (
     <View style={[styles.keyValue, last && { borderBottomWidth: 0 }]}>
-      <Text style={[type.small, { flex: 1 }]}>{label}</Text>
-      <Text style={[type.body, { flex: 1.4, textAlign: "right" }]} selectable>{String(value)}</Text>
+      <Text style={[type.small, { flex: 1, minWidth: 0 }]}>{label}</Text>
+      <Text style={[type.body, { flex: 1.4, minWidth: 0, textAlign: "right" }]} selectable>{String(value)}</Text>
     </View>
   );
 }
@@ -321,7 +436,7 @@ export function EmptyState({ icon = "file-tray-outline", title, message, action,
       <Ionicons name={icon} size={28} color={colors.mutedForeground} />
       <Text style={[type.subheading, { textAlign: "center" }]}>{title}</Text>
       {message ? <Text style={[type.small, { textAlign: "center" }]}>{message}</Text> : null}
-      {action ? <Button title={action} onPress={onAction} variant="secondary" small style={{ marginTop: 6 }} /> : null}
+      {action ? <Button title={action} onPress={onAction} variant="secondary" small style={{ marginTop: 6, alignSelf: "center" }} /> : null}
     </View>
   );
 }
@@ -331,7 +446,7 @@ export function ErrorState({ message, onRetry, style }) {
     <View style={[styles.state, styles.stateBox, { borderColor: colors.destructiveSoft }, style]}>
       <Ionicons name="alert-circle-outline" size={28} color={colors.destructive} />
       <Text style={[type.body, { textAlign: "center" }]}>{message || "Something went wrong."}</Text>
-      {onRetry ? <Button title="Retry" onPress={onRetry} variant="outline" small icon="refresh" /> : null}
+      {onRetry ? <Button title="Retry" onPress={onRetry} variant="outline" small icon="refresh" style={{ alignSelf: "center" }} /> : null}
     </View>
   );
 }
@@ -340,14 +455,14 @@ export function Notice({ tone = "info", icon, title, message, action, onAction, 
   const palette = tones[tone] || tones.info;
   return (
     <View style={[styles.notice, { backgroundColor: palette.bg }, style]}>
-      {icon ? <Ionicons name={icon} size={18} color={palette.fg} style={{ marginTop: 1 }} /> : null}
-      <View style={{ flex: 1, gap: 2 }}>
+      {icon ? <Ionicons name={icon} size={18} color={palette.fg} style={{ marginTop: 1, flexShrink: 0 }} /> : null}
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         {title ? <Text style={[type.subheading, { color: palette.fg }]}>{title}</Text> : null}
         {message ? <Text style={[type.small, { color: palette.fg }]}>{message}</Text> : null}
       </View>
       {action ? (
-        <Pressable onPress={onAction} hitSlop={8}>
-          <Text style={[styles.link, { color: palette.fg }]}>{action}</Text>
+        <Pressable onPress={onAction} hitSlop={8} accessibilityRole="button" style={styles.noticeAction}>
+          <Text style={[styles.link, { color: palette.fg, textAlign: "right" }]}>{action}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -357,44 +472,67 @@ export function Notice({ tone = "info", icon, title, message, action, onAction, 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   screenContent: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
-  pageHeader: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  grow: { flex: 1, minWidth: 0 },
+  noShrink: { flexShrink: 0 },
+  pageHeader: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  pageHeaderRight: { flexShrink: 0, maxWidth: "50%" },
+  pageHeaderIcon: { flexShrink: 0, width: 48, height: 48, borderRadius: radius.lg, alignItems: "center", justifyContent: "center" },
+  pageHeaderEyebrow: { ...type.tiny, fontSize: 10, letterSpacing: 0.8 },
+  pageHeaderTitle: { fontSize: 24, lineHeight: 30, fontWeight: "600", letterSpacing: -0.4, color: colors.navy },
   pageHeaderDark: { backgroundColor: colors.sidebar, padding: spacing.lg, borderRadius: radius.xl },
-  card: { backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.sm, ...shadow.card },
+  card: { backgroundColor: colors.card, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.sm, ...shadow.card },
   sectionTitle: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   sectionTitleText: { fontSize: 18, lineHeight: 24, fontWeight: "600", color: colors.foreground, letterSpacing: -0.2 },
-  actionPill: { flexDirection: "row", alignItems: "center", gap: 2, paddingVertical: 6, paddingLeft: 12, paddingRight: 8, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
-  actionPillText: { fontSize: 13, fontWeight: "600", color: colors.primary },
-  link: { color: colors.primary, fontWeight: "600", fontSize: 13 },
+  actionPill: { flexDirection: "row", alignItems: "center", gap: 2, flexShrink: 0, maxWidth: "45%", paddingVertical: 6, paddingLeft: 12, paddingRight: 8, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
+  actionPillText: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.primary, flexShrink: 1 },
+  link: { color: colors.primary, fontWeight: "600", fontSize: 13, lineHeight: 18 },
   divider: { height: 1, backgroundColor: colors.border },
-  button: { minHeight: 46, paddingHorizontal: 18, borderRadius: radius.md, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, alignSelf: "flex-start" },
+  button: { minHeight: 46, paddingHorizontal: 18, borderRadius: radius.md, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, alignSelf: "flex-start", minWidth: 0, maxWidth: "100%" },
   buttonSmall: { minHeight: 36, paddingHorizontal: 12, borderRadius: radius.sm },
-  buttonText: { fontSize: 15, lineHeight: 20, fontWeight: "600", flexShrink: 1 },
-  iconButton: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  buttonText: { fontSize: 15, lineHeight: 20, fontWeight: "600", flexShrink: 1, textAlign: "center" },
+  iconButton: { flexShrink: 0, width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   // Chips sit in rows next to titles: centred vertically, and allowed to shrink (text
   // truncates) so they never push a title out of the row. A chip placed on its own in a
   // column passes style={{ alignSelf: "flex-start" }}.
   chip: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "center", flexShrink: 1, maxWidth: "100%", paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.pill },
   chipText: { fontSize: 12, lineHeight: 16, fontWeight: "600", flexShrink: 1 },
-  fieldLabel: { fontSize: 13, fontWeight: "600", color: colors.foreground },
+  fieldLabel: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.foreground },
+  search: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 48, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, ...shadow.card },
+  searchFocused: { borderColor: colors.primary, borderWidth: 1.5 },
+  searchInput: { flex: 1, minWidth: 0, paddingVertical: 10, fontSize: 15, lineHeight: 20, color: colors.foreground },
+  searchClear: { flexShrink: 0, width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: colors.mutedForeground },
   input: { minHeight: 46, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.card, fontSize: 15, color: colors.foreground },
   inputMultiline: { minHeight: 100, textAlignVertical: "top" },
-  selectInput: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  selectInput: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   sheetBackdrop: { flex: 1, backgroundColor: "rgba(11,19,16,0.45)" },
   sheet: { backgroundColor: colors.card, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingBottom: 28, maxHeight: "85%" },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginTop: 10 },
-  sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-  sheetOption: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.border },
+  sheetHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  sheetScroll: { flexGrow: 0, flexShrink: 1 },
+  sheetOption: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.border },
   segmented: { flexDirection: "row", backgroundColor: colors.muted, borderRadius: radius.md, padding: 3 },
-  segment: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, borderRadius: radius.sm, alignItems: "center" },
+  segment: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 8, paddingHorizontal: 4, borderRadius: radius.sm },
   segmentActive: { backgroundColor: colors.card, ...shadow.card },
-  segmentText: { fontSize: 13, fontWeight: "600", color: colors.mutedForeground },
-  listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 12, paddingHorizontal: spacing.md, backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
-  rowIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  avatar: { backgroundColor: colors.panel, alignItems: "center", justifyContent: "center" },
-  statTile: { flex: 1, minWidth: 140, gap: 4, padding: spacing.md },
-  statValue: { fontSize: 26, lineHeight: 32, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
+  segmentText: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.mutedForeground },
+  segmentLabel: { flexShrink: 1, minWidth: 0, textAlign: "center" },
+  segmentScroll: { flex: 0, paddingHorizontal: 12 },
+  segmentedScroll: { flexGrow: 0 },
+  segmentedScrollContent: { flexGrow: 1 },
+  segmentCount: { flexShrink: 0, fontVariant: ["tabular-nums"] },
+  listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 12, paddingHorizontal: spacing.md, backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, ...shadow.card },
+  listRowRight: { flexShrink: 0, maxWidth: "45%", alignItems: "flex-end" },
+  rowIcon: { flexShrink: 0, width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  avatar: { flexShrink: 0, alignItems: "center", justifyContent: "center" },
+  statTile: { flex: 1, minWidth: 140, padding: spacing.md, gap: 2 },
+  statRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  statChevron: { flexShrink: 0, width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: colors.muted },
+  statIcon: { flexShrink: 0, width: 38, height: 38, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  statLabel: { fontSize: 13, lineHeight: 17, fontWeight: "600", color: colors.foreground },
+  statHint: { fontSize: 11, lineHeight: 15, color: colors.mutedForeground },
+  statValue: { fontSize: 22, lineHeight: 28, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
   keyValue: { flexDirection: "row", gap: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   state: { alignItems: "center", justifyContent: "center", gap: 8, padding: spacing.xl },
   stateBox: { borderWidth: 1, borderStyle: "dashed", borderColor: colors.border, borderRadius: radius.lg, backgroundColor: colors.card },
   notice: { flexDirection: "row", gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, alignItems: "flex-start" },
+  noticeAction: { flexShrink: 0, maxWidth: "40%" },
 });

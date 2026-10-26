@@ -30,7 +30,7 @@ export default function AnnouncementDetailScreen({ route }) {
         <Text style={styles.title}>{plainText(alert.name) || "Announcement"}</Text>
         {alert.date_entered ? (
           <View style={styles.datePill}>
-            <Ionicons name="time-outline" size={13} color="#FFFFFF" />
+            <Ionicons name="time-outline" size={13} color="#FFFFFF" style={{ flexShrink: 0 }} />
             <Text style={styles.dateText}>{formatDate(alert.date_entered)}</Text>
           </View>
         ) : null}
@@ -93,21 +93,21 @@ function DataTable({ header, rows }) {
 
 const styles = StyleSheet.create({
   hero: { backgroundColor: colors.navy, borderRadius: radius.lg, padding: 20, gap: 8, overflow: "hidden" },
-  heroGlow: { position: "absolute", width: 200, height: 200, borderRadius: 100, right: -70, top: -100, backgroundColor: "rgba(59,130,246,0.28)" },
+  heroGlow: { position: "absolute", width: 200, height: 200, borderRadius: 100, right: -70, top: -100, backgroundColor: "rgba(212,250,60,0.16)" },
   heroIcon: { width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.primary, marginBottom: 4 },
   eyebrow: { ...type.tiny, color: "rgba(255,255,255,0.6)", letterSpacing: 1 },
   title: { fontSize: 22, lineHeight: 29, fontWeight: "600", letterSpacing: -0.3, color: "#FFFFFF" },
-  datePill: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", marginTop: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.12)" },
-  dateText: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: "#FFFFFF" },
+  datePill: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", maxWidth: "100%", marginTop: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.12)" },
+  dateText: { flexShrink: 1, fontSize: 12, lineHeight: 16, fontWeight: "600", color: "#FFFFFF" },
   body: { padding: 20, gap: 16 },
   message: { fontSize: 15, lineHeight: 24, color: colors.foreground },
   tableScroll: { marginHorizontal: -4 },
   table: { borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
   tr: { flexDirection: "row" },
   thead: { backgroundColor: colors.navy },
-  th: { paddingVertical: 10, paddingHorizontal: 12, fontSize: 12, lineHeight: 16, fontWeight: "600", color: "#FFFFFF", textTransform: "uppercase", letterSpacing: 0.4 },
+  th: { minWidth: 0, paddingVertical: 10, paddingHorizontal: 12, fontSize: 12, lineHeight: 16, fontWeight: "600", color: "#FFFFFF", textTransform: "uppercase", letterSpacing: 0.4 },
   zebra: { backgroundColor: colors.background },
   rowLine: { borderTopWidth: 1, borderTopColor: colors.border },
-  td: { paddingVertical: 10, paddingHorizontal: 12, fontSize: 14, lineHeight: 20, color: colors.foreground },
+  td: { minWidth: 0, paddingVertical: 10, paddingHorizontal: 12, fontSize: 14, lineHeight: 20, color: colors.foreground },
   firstCol: { fontWeight: "600", color: colors.navy },
 });

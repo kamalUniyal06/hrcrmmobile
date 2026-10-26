@@ -58,8 +58,18 @@ describe('leaves', () => {
     expect(gateway.mock.calls[0][0]).toMatchObject({ action: 'fetch', module: 'hrc_leaves', filters: { employee_id: 'emp-1' } });
     await expect(updateLeaveStatus('l1', 'Maybe')).rejects.toThrow('Accepted or Rejected');
     gateway.mockResolvedValue({ success: true });
-    await updateLeaveStatus('l1', 'Accepted');
-    expect(gateway).toHaveBeenLastCalledWith({ action: 'update', module: 'hrc_leaves', id: 'l1', data: { status: 'Accepted' } });
+    // Like the web, approving needs a reason and an approver, and records the handover and date.
+    await expect(updateLeaveStatus('l1', 'Accepted')).rejects.toThrow('reason');
+    await expect(updateLeaveStatus('l1', 'Accepted', { reason: 'Balance available' })).rejects.toThrow('approving');
+    await updateLeaveStatus('l1', 'Accepted', { reason: ' Balance available ', approvedById: 'emp-1', handoverToId: 'emp-2' });
+    expect(gateway).toHaveBeenLastCalledWith({
+      action: 'update',
+      module: 'hrc_leaves',
+      id: 'l1',
+      data: { status: 'Accepted', verdict: 'Balance available', approved_by_id: 'emp-1', work_handed_over_to_id: 'emp-2', approved_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) },
+    });
+    await updateLeaveStatus('l1', 'Rejected');
+    expect(gateway).toHaveBeenLastCalledWith({ action: 'update', module: 'hrc_leaves', id: 'l1', data: { status: 'Rejected' } });
     expect(leaveStatusOf({ status: 'weird' })).toBe('Applied');
     expect(leaveBalancesOf({ available_planned_leaves: '3', available_sick_leaves: '1' }).map((b) => b.available)).toEqual([3, 1]);
   });
@@ -162,7 +172,13 @@ describe('admin', () => {
     const body = buildCandidateListRequest({ page: 2, search: 'kam' });
     expect(body).toMatchObject({ module: 'hrc_candidates', page: 2, per_page: 20, search: 'kam' });
     expect(body.filters).toMatchObject({ employee: 0, hrc_stages_id_c: { nin: ['', 'Unassigned'] } });
+    expect(body.search_fields).toEqual(['first_name', 'last_name', 'phone_mobile', 'current_designation', 'title', 'department']);
+    // Like the web, an email is matched exactly through filters.email1 instead of the text search.
+    const byEmail = buildCandidateListRequest({ search: 'asha@example.com' });
+    expect(byEmail.filters.email1).toBe('asha@example.com');
+    expect(byEmail.search).toBeUndefined();
     expect(buildCandidateListRequest({ shortlistedOnly: true }).filters).toEqual({ employee: 0, hrc_stages_id_c_name: 'Shortlisted' });
+    expect(buildCandidateListRequest({ shortlistedOnly: true, search: 'kam' }).search).toBeUndefined();
     gateway.mockResolvedValue({ success: true, records: [{ id: 'c1' }, { id: 'c2', deleted: '1' }], total: 41, page: 1, total_pages: 3 });
     const page = await fetchCandidatePage({ page: 1 });
     expect(page).toMatchObject({ total: 41, page: 1, pages: 3 });

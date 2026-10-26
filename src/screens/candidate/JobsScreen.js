@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type } from "../../theme";
-import { Button, Card, Chip, EmptyState, ErrorState, Field, KeyValue, ListRow, LoadingState, Notice, PageHeader, Row, Screen } from "../../components/ui";
+import { radius, tones, type } from "../../theme";
+import { Button, Card, Chip, EmptyState, ErrorState, KeyValue, ListRow, LoadingState, Notice, PageHeader, Screen, SearchField } from "../../components/ui";
 import { useCandidateProfile } from "../../hooks/queries";
 import { applicationStage, applyToJob, experienceRange, fetchJobApplications, fetchJobPostings, jobIsOpen, jobLocation, jobTitle, jobType, salaryRange } from "../../api/candidate.api";
 import { toast } from "../../store/toastStore";
@@ -33,7 +34,7 @@ export function JobsScreen({ navigation }) {
   return (
     <Screen refreshing={postings.isFetching} onRefresh={() => postings.refetch()}>
       <PageHeader title="Open roles" subtitle="Apply with one tap. Your profile goes straight to the hiring team." />
-      <Field value={search} onChangeText={setSearch} placeholder="Search by title or location" autoCapitalize="none" />
+      <SearchField value={search} onChangeText={setSearch} placeholder="Search by title or location" />
       {postings.isPending ? (
         <LoadingState label="Loading jobs…" />
       ) : postings.isError ? (
@@ -52,7 +53,7 @@ export function JobsScreen({ navigation }) {
               title={jobTitle(job)}
               subtitle={[jobLocation(job), jobType(job, postings.data.dropdowns), experienceRange(job)].filter(Boolean).join(" · ")}
               meta={salaryRange(job) || undefined}
-              right={applied ? <Chip label={stage.label} tone={stage.tone} small /> : undefined}
+              right={applied ? <Chip label={stage.label} tone={stage.tone} small style={{ flexShrink: 0 }} /> : undefined}
               onPress={() => navigation.navigate("JobDetail", { id: job.id })}
             />
           );
@@ -89,11 +90,12 @@ export function JobDetailScreen({ route, navigation }) {
     <Screen>
       <View style={{ gap: 6 }}>
         <Text style={type.title}>{jobTitle(job)}</Text>
-        <Row style={{ flexWrap: "wrap" }}>
-          {jobLocation(job) ? <Chip label={jobLocation(job)} icon="location-outline" /> : null}
-          {jobType(job, postings.data.dropdowns) ? <Chip label={jobType(job, postings.data.dropdowns)} icon="time-outline" /> : null}
-          {experienceRange(job) ? <Chip label={experienceRange(job)} icon="ribbon-outline" /> : null}
-        </Row>
+        {/* Job meta (location · type · experience) wraps instead of truncating long values. */}
+        <View style={styles.pillRow}>
+          {jobLocation(job) ? <Pill label={jobLocation(job)} icon="location-outline" /> : null}
+          {jobType(job, postings.data.dropdowns) ? <Pill label={jobType(job, postings.data.dropdowns)} icon="time-outline" /> : null}
+          {experienceRange(job) ? <Pill label={experienceRange(job)} icon="ribbon-outline" /> : null}
+        </View>
       </View>
 
       {applied ? (
@@ -122,13 +124,30 @@ export function JobDetailScreen({ route, navigation }) {
       {requirements.length ? (
         <Card>
           <Text style={type.subheading}>What we're looking for</Text>
-          <Row style={{ flexWrap: "wrap" }}>
+          <View style={styles.pillRow}>
             {requirements.map((item, index) => (
-              <Chip key={`${item}-${index}`} label={item} tone="neutral" />
+              <Pill key={`${item}-${index}`} label={item} />
             ))}
-          </Row>
+          </View>
         </Card>
       ) : null}
     </Screen>
   );
 }
+
+/** Neutral chip whose label wraps (Chip is single-line), for values the user must read in full. */
+function Pill({ label, icon }) {
+  return (
+    <View style={styles.pill}>
+      {icon ? <Ionicons name={icon} size={12} color={tones.neutral.fg} style={styles.pillIcon} /> : null}
+      <Text style={styles.pillText}>{label}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  pillRow: { flexDirection: "row", flexWrap: "wrap", columnGap: 8, rowGap: 8 },
+  pill: { flexDirection: "row", alignItems: "flex-start", gap: 4, maxWidth: "100%", alignSelf: "flex-start", paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.lg, backgroundColor: tones.neutral.bg },
+  pillIcon: { flexShrink: 0, marginTop: 2 },
+  pillText: { flexShrink: 1, fontSize: 12, lineHeight: 16, fontWeight: "600", color: tones.neutral.fg },
+});

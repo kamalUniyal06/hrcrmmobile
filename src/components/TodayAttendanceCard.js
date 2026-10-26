@@ -4,7 +4,7 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, tones, type } from "../theme";
 import { Button, Card, Row } from "./ui";
 import { useAttendanceLimits, useDailyActivity } from "../hooks/queries";
-import { currentMinutesInIndia, formatDuration, nowStampInIndia, parseActivityTime, todayInIndia } from "../utils/dates";
+import { currentMinutesInIndia, formatDate, formatDuration, nowStampInIndia, parseActivityTime, todayInIndia } from "../utils/dates";
 
 /**
  * Today's shift at a glance: clock-in, lunch and clock-out times with a live timer
@@ -35,21 +35,20 @@ export default function TodayAttendanceCard() {
   const breakSeconds = lunchIn ? Math.max(0, Math.floor(((lunchOut ? lunchOut.stamp : nowStamp) - lunchIn.stamp) / 1000)) : 0;
   const breakOver = onBreak && breakSeconds > limits.lunchOutMinutes * 60;
 
-  const shift = `Shift from ${limits.actualLoginTime}`;
+  // "Fri, 23 Oct · Shift from 9:30 AM" sits under the title, so the card needs no separate schedule row.
+  const subtitle = `${formatDate(todayInIndia(), { weekday: true, year: false })} · Shift from ${limits.actualLoginTime}`;
 
   if (isPending) {
     return (
       <Card style={styles.card}>
-        <StatusRow tone="neutral" label="Loading" />
-        <Text style={type.small}>Checking today's attendance…</Text>
+        <TitleRow tone="neutral" label="Loading" subtitle="Checking today's attendance…" />
       </Card>
     );
   }
   if (error) {
     return (
       <Card style={styles.card}>
-        <StatusRow tone="closed" label="Error" />
-        <Text style={type.small}>Couldn't load today's attendance.</Text>
+        <TitleRow tone="closed" label="Error" subtitle="Couldn't load today's attendance." />
         <Button title="Retry" variant="outline" small icon="refresh" onPress={() => refetch()} />
       </Card>
     );
@@ -57,21 +56,12 @@ export default function TodayAttendanceCard() {
   if (!isPresentToday) {
     return (
       <Card style={styles.card}>
-        <StatusRow tone="closed" label="Not clocked in" />
-        <ScheduleHeader shift={shift} />
-        <View style={styles.idle}>
-          <View style={styles.idleIcon}>
-            <Ionicons name="finger-print-outline" size={22} color={colors.mutedForeground} />
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={type.small}>Clock in to start tracking your shift, lunch and working hours.</Text>
-            {!canLogin ? (
-              <Row gap={4}>
-                <Ionicons name="time-outline" size={13} color={colors.mutedForeground} />
-                <Text style={[type.small, { fontSize: 12 }]}>Clock in opens at {limits.actualLoginTime}</Text>
-              </Row>
-            ) : null}
-          </View>
+        <TitleRow tone="closed" label="Not in yet" subtitle={subtitle} />
+        <View style={styles.note}>
+          <Ionicons name={canLogin ? "finger-print-outline" : "time-outline"} size={15} color={colors.primary} style={{ flexShrink: 0 }} />
+          <Text style={styles.noteText}>
+            {canLogin ? "Clock in to start tracking your shift, lunch and working hours." : `Clock in opens at ${limits.actualLoginTime}.`}
+          </Text>
         </View>
       </Card>
     );
@@ -82,110 +72,103 @@ export default function TodayAttendanceCard() {
     ? { label: "Clocked out", tone: "neutral" }
     : onBreak
       ? { label: "On lunch", tone: "attention" }
-      : { label: `Checked in · ${late ? "Late" : "On time"}`, tone: late ? "attention" : "success" };
+      : late
+        ? { label: "Checked in late", tone: "attention" }
+        : { label: "Checked in", tone: "success" };
 
   return (
     <Card style={styles.card}>
-      <StatusRow tone={status.tone} label={status.label} time={login.time} />
+      <TitleRow tone={status.tone} label={status.label} subtitle={subtitle} />
 
-      <View>
+      <View style={styles.timerRow}>
         <Text style={styles.sessionLabel}>{logout ? "Worked today" : "Working session"}</Text>
-        <Text style={styles.timer}>{formatDuration(worked)}</Text>
+        <Text style={styles.timer} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{formatDuration(worked)}</Text>
       </View>
 
-      <ScheduleHeader shift={shift} />
-      <View style={styles.grid}>
-        <Slot icon="log-in" tone="success" label="Login / In" value={login.time} />
-        <Slot icon="restaurant" tone="info" label="Lunch start" value={lunchIn?.time} />
+      {/* One strip of four times instead of a 2×2 grid keeps the card short. */}
+      <View style={styles.strip}>
+        <Slot icon="log-in" tone="success" label="In" value={login.time} />
+        <Slot icon="restaurant" tone="info" label="Lunch" value={lunchIn?.time} />
         <Slot
           icon="cafe"
           tone="info"
-          label="Lunch end"
+          label="Back"
           value={lunchOut?.time}
           active={onBreak}
-          highlight={breakOver ? `over ${limits.lunchOutMinutes} min` : onBreak ? formatDuration(breakSeconds) : null}
+          highlight={breakOver ? `>${limits.lunchOutMinutes}m` : onBreak ? formatDuration(breakSeconds).slice(3) : null}
           warn={breakOver}
         />
-        <Slot icon="log-out" tone="neutral" label="Logout / Out" value={logout?.time} />
+        <Slot icon="log-out" tone="neutral" label="Out" value={logout?.time} />
       </View>
 
       {logout ? (
         <Row gap={6}>
-          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-          <Text style={type.small}>Your shift is complete. See you tomorrow.</Text>
+          <Ionicons name="checkmark-circle" size={15} color={colors.success} style={{ flexShrink: 0 }} />
+          <Text style={[type.small, { flex: 1 }]}>Your shift is complete. See you tomorrow.</Text>
         </Row>
       ) : null}
     </Card>
   );
 }
 
-/** Coloured dot + uppercase status pill, with the punch time as a pill on the right. */
-function StatusRow({ tone, label, time }) {
+/** Web "Daily Check In" header: green icon tile, title with the date and shift under it, and a short status pill. */
+function TitleRow({ tone, label, subtitle }) {
   const palette = tones[tone] || tones.neutral;
   return (
-    <Row style={{ justifyContent: "space-between" }}>
-      <View style={[styles.statusPill, { backgroundColor: palette.bg }]}>
-        <View style={[styles.statusDot, { backgroundColor: palette.fg }]} />
-        <Text style={[styles.statusText, { color: palette.fg }]} numberOfLines={1}>{label}</Text>
-      </View>
-      {time ? (
-        <View style={styles.timePill}>
-          <Ionicons name="time-outline" size={13} color={colors.foreground} />
-          <Text style={styles.timePillText}>{time}</Text>
-        </View>
-      ) : null}
-    </Row>
-  );
-}
-
-function ScheduleHeader({ shift }) {
-  return (
-    <Row style={{ justifyContent: "space-between" }}>
-      <Text style={styles.scheduleLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>Daily schedule</Text>
-      <View style={styles.shiftTag}>
-        <Text style={styles.shiftTagText} numberOfLines={1}>{shift}</Text>
-      </View>
-    </Row>
-  );
-}
-
-/** One schedule slot: a soft tinted tile with its icon; greyed out until it has a time. */
-function Slot({ icon, tone, label, value, active, highlight, warn }) {
-  const palette = tones[tone] || tones.neutral;
-  const done = Boolean(value);
-  return (
-    <View style={[styles.slot, { backgroundColor: done || active ? palette.bg : colors.background }, active && styles.slotActive]}>
-      <View style={styles.slotIcon}>
-        <Ionicons name={done || active ? icon : `${icon}-outline`} size={15} color={done || active ? palette.fg : colors.mutedForeground} />
+    <View style={styles.titleRow}>
+      <View style={styles.titleIcon}>
+        <Ionicons name="calendar-number-outline" size={17} color="#FFFFFF" />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.slotLabel} numberOfLines={1}>{label}</Text>
-        <Text style={[styles.slotValue, !done && { color: colors.mutedForeground }]} numberOfLines={1}>{value || "—"}</Text>
-        {highlight ? <Text style={[styles.highlight, warn && { color: colors.destructive }]} numberOfLines={1}>{highlight}</Text> : null}
+        <Text style={styles.title}>Daily check-in</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      </View>
+      <View style={[styles.statusPill, { backgroundColor: palette.bg }]}>
+        <View style={[styles.statusDot, { backgroundColor: palette.fg }]} />
+        <Text style={[styles.statusText, { color: palette.fg }]} numberOfLines={2}>{label}</Text>
       </View>
     </View>
   );
 }
 
+/** One time in the strip: icon, short label and time; greyed out until it has a time. */
+function Slot({ icon, tone, label, value, active, highlight, warn }) {
+  const palette = tones[tone] || tones.neutral;
+  const done = Boolean(value);
+  return (
+    <View style={[styles.slot, { backgroundColor: done || active ? palette.bg : colors.card }, active && styles.slotActive]}>
+      <View style={styles.slotHead}>
+        <Ionicons name={done || active ? icon : `${icon}-outline`} size={12} color={done || active ? palette.fg : colors.mutedForeground} />
+        <Text style={styles.slotLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
+      </View>
+      <Text style={[styles.slotValue, !done && { color: colors.mutedForeground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+        {value || "—"}
+      </Text>
+      {highlight ? <Text style={[styles.highlight, warn && { color: colors.destructive }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{highlight}</Text> : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  card: { gap: 14 },
-  idle: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: radius.md, backgroundColor: colors.background },
-  idleIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: colors.muted },
-  statusPill: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1, paddingVertical: 5, paddingHorizontal: 10, borderRadius: radius.pill },
-  statusDot: { width: 7, height: 7, borderRadius: 4 },
-  statusText: { fontSize: 11, lineHeight: 15, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, flexShrink: 1 },
-  timePill: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 5, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
-  timePillText: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
-  sessionLabel: { ...type.tiny, letterSpacing: 1 },
-  timer: { fontSize: 40, lineHeight: 46, fontWeight: "600", color: colors.navy, fontVariant: ["tabular-nums"], letterSpacing: -1 },
-  scheduleLabel: { ...type.tiny, flex: 1, color: colors.foreground, letterSpacing: 0.3 },
-  shiftTag: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: radius.sm, backgroundColor: colors.primarySoft },
-  shiftTagText: { fontSize: 11, lineHeight: 15, fontWeight: "600", color: colors.primary },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  slot: { width: "48.5%", flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: radius.md },
-  slotActive: { borderWidth: 1, borderColor: colors.info },
-  slotIcon: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: colors.card },
-  slotLabel: { fontSize: 11, lineHeight: 15, fontWeight: "600", color: colors.mutedForeground },
-  slotValue: { fontSize: 14, lineHeight: 19, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
-  highlight: { fontSize: 11, lineHeight: 15, fontWeight: "600", color: colors.attention },
+  // Light lime card with a green border, like the web Daily Check In panel; kept compact for phones.
+  card: { gap: 10, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: "#F7FBEA", borderColor: "#A9D3BD", borderWidth: 1.5 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  titleIcon: { flexShrink: 0, width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", backgroundColor: colors.primary },
+  title: { fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.foreground },
+  subtitle: { fontSize: 12, lineHeight: 16, fontWeight: "500", color: colors.primary },
+  statusPill: { flexDirection: "row", alignItems: "center", gap: 5, flexShrink: 0, maxWidth: "40%", paddingVertical: 4, paddingHorizontal: 9, borderRadius: radius.pill },
+  statusDot: { flexShrink: 0, width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 11, lineHeight: 15, fontWeight: "600", flexShrink: 1 },
+  note: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingVertical: 8, paddingHorizontal: 10, borderRadius: radius.sm, backgroundColor: "rgba(255,255,255,0.7)" },
+  noteText: { flex: 1, fontSize: 12, lineHeight: 17, color: colors.mutedForeground },
+  timerRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", columnGap: 10, rowGap: 2 },
+  sessionLabel: { ...type.tiny, flexShrink: 1, letterSpacing: 0.8 },
+  timer: { flexShrink: 0, fontSize: 26, lineHeight: 32, fontWeight: "600", color: colors.navy, fontVariant: ["tabular-nums"], letterSpacing: -0.5 },
+  strip: { flexDirection: "row", gap: 6 },
+  slot: { flex: 1, minWidth: 0, gap: 2, paddingVertical: 7, paddingHorizontal: 7, borderRadius: radius.sm, borderWidth: 1, borderColor: "transparent" },
+  slotActive: { borderColor: colors.info },
+  slotHead: { flexDirection: "row", alignItems: "center", gap: 4 },
+  slotLabel: { flexShrink: 1, fontSize: 10, lineHeight: 13, fontWeight: "600", color: colors.mutedForeground },
+  slotValue: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
+  highlight: { fontSize: 10, lineHeight: 13, fontWeight: "600", color: colors.attention },
 });

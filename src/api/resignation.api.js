@@ -39,6 +39,39 @@ export const startResignation = async (email) => {
   return created;
 };
 
+/** Admin: update fields on a resignation record (web: updateResignationRecord). */
+export const updateResignationRecord = async (id, data) => {
+  if (!id) throw new Error("A resignation request ID is required.");
+  return assertSuccess(await gateway({ action: "update", module: MODULE, id, data }), "Could not update the resignation request.");
+};
+
+// Admin offboarding (web: employement/pages/OffboardingPage.jsx).
+export const OFFBOARDING_APPROVALS = [
+  { field: "notify_tl", label: "Team lead" },
+  { field: "notify_manager", label: "Manager" },
+  { field: "notify_hr", label: "HR" },
+];
+
+export const CHECKOUT_TASKS = [
+  { field: "assets", label: "Assets returned" },
+  { field: "kt", label: "Knowledge transfer" },
+  { field: "exit_interview", label: "Exit interview" },
+  { field: "reviews", label: "Reviews closed" },
+  { field: "salary_slip", label: "Salary slip" },
+  { field: "decleration_form", label: "Declaration form" },
+];
+
+/** { approvalsReady, approvalsDone, doneTasks, completed, label, key } for one case. */
+export function offboardingState(record) {
+  const approvalsDone = OFFBOARDING_APPROVALS.filter((item) => isNotified(record[item.field])).length;
+  const approvalsReady = approvalsDone === OFFBOARDING_APPROVALS.length;
+  const doneTasks = CHECKOUT_TASKS.filter((task) => isNotified(record[task.field])).length;
+  const completed = approvalsReady && doneTasks === CHECKOUT_TASKS.length;
+  const key = completed ? "complete" : approvalsReady ? "progress" : "pending";
+  const label = completed ? "Complete" : approvalsReady ? "Checkout in progress" : "Awaiting approvals";
+  return { approvalsReady, approvalsDone, doneTasks, completed, key, label };
+}
+
 /** Marks one approval step as notified after its token was verified. */
 export const markStepNotified = async (id, notifyField) => {
   if (!id) throw new Error("A resignation request ID is required.");

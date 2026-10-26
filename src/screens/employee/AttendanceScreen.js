@@ -86,7 +86,7 @@ export default function AttendanceScreen({ route }) {
       {/* Green banner with this month's totals. */}
       <View style={styles.hero}>
         <View style={styles.heroGlow} />
-        <Text style={styles.heroTitle} numberOfLines={1}>{title}</Text>
+        <Text style={styles.heroTitle} numberOfLines={2}>{title}</Text>
         <Text style={styles.heroSubtitle}>{route?.params?.email ? email : "Tap a day to see check-in, lunch and check-out times."}</Text>
         <View style={styles.heroStats}>
           <HeroStat label="On time" value={counts.present} color="#34D399" />
@@ -113,13 +113,13 @@ export default function AttendanceScreen({ route }) {
       {selected && selectedSummary ? (
         <Card style={styles.dayCard}>
           <Row style={{ justifyContent: "space-between" }}>
-            <Row gap={10} style={{ flex: 1 }}>
+            <Row gap={10} style={{ flex: 1, minWidth: 0 }}>
               <View style={[styles.dayIcon, { backgroundColor: tones[statusTone(selectedSummary.status, holidayMap[selected])].bg }]}>
                 <Ionicons name="calendar" size={18} color={tones[statusTone(selectedSummary.status, holidayMap[selected])].fg} />
               </View>
-              <Text style={[type.heading, { flex: 1 }]} numberOfLines={1}>{formatDate(selected, { weekday: true })}</Text>
+              <Text style={[type.heading, { flex: 1, minWidth: 0 }]} numberOfLines={2}>{formatDate(selected, { weekday: true })}</Text>
             </Row>
-            <Chip label={statusLabel(selectedSummary.status, holidayMap[selected], isWeekend(selected))} tone={statusTone(selectedSummary.status, holidayMap[selected])} />
+            <Chip label={statusLabel(selectedSummary.status, holidayMap[selected], isWeekend(selected))} tone={statusTone(selectedSummary.status, holidayMap[selected])} style={styles.dayChip} />
           </Row>
           {holidayMap[selected] ? <Text style={type.small}>{holidayMap[selected]}</Text> : null}
           {selectedSummary.sessions.length ? (
@@ -132,18 +132,18 @@ export default function AttendanceScreen({ route }) {
                   <TimeTile icon="log-out" label="Clock out" value={session.logout?.time} tone="closed" />
                 </View>
                 <View style={styles.workedBar}>
-                  <Row gap={8}>
-                    <Ionicons name="hourglass-outline" size={16} color={colors.primary} />
-                    <Text style={styles.workedLabel}>Worked</Text>
+                  <Row gap={8} style={{ flex: 1, minWidth: 0 }}>
+                    <Ionicons name="hourglass-outline" size={16} color={colors.primary} style={{ flexShrink: 0 }} />
+                    <Text style={[styles.workedLabel, { flexShrink: 1 }]}>Worked</Text>
                   </Row>
-                  <Text style={styles.workedValue}>{formatHours(session.worked)}</Text>
+                  <Text style={styles.workedValue} numberOfLines={1}>{formatHours(session.worked)}</Text>
                 </View>
               </View>
             ))
           ) : (
             <View style={styles.emptyDay}>
-              <Ionicons name={selectedLeave ? "airplane-outline" : selected > today ? "time-outline" : "remove-circle-outline"} size={18} color={colors.mutedForeground} />
-              <Text style={[type.small, { flex: 1 }]}>
+              <Ionicons name={selectedLeave ? "airplane-outline" : selected > today ? "time-outline" : "remove-circle-outline"} size={18} color={colors.mutedForeground} style={{ flexShrink: 0 }} />
+              <Text style={[type.small, { flex: 1, minWidth: 0 }]}>
                 {selectedLeave ? `On leave — ${selectedLeave.type_of_leave || selectedLeave.leave_type || "Approved leave"}` : selected > today ? "This day is still ahead." : "No attendance recorded for this day."}
               </Text>
             </View>
@@ -158,8 +158,8 @@ function HeroStat({ label, value, color }) {
   return (
     <View style={styles.heroStat}>
       <View style={[styles.heroDot, { backgroundColor: color }]} />
-      <Text style={styles.heroStatValue}>{value}</Text>
-      <Text style={styles.heroStatLabel} numberOfLines={1}>{label}</Text>
+      <Text style={styles.heroStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
+      <Text style={styles.heroStatLabel} numberOfLines={2}>{label}</Text>
     </View>
   );
 }
@@ -172,8 +172,8 @@ function TimeTile({ icon, label, value, tone }) {
         <Ionicons name={value ? icon : `${icon}-outline`} size={14} color={value ? palette.fg : colors.mutedForeground} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[styles.timeLabel, value && { color: palette.fg }]} numberOfLines={1}>{label}</Text>
-        <Text style={[styles.timeValue, !value && { color: colors.mutedForeground }]} numberOfLines={1}>{value || "—"}</Text>
+        <Text style={[styles.timeLabel, value && { color: palette.fg }]} numberOfLines={2}>{label}</Text>
+        <Text style={[styles.timeValue, !value && { color: colors.mutedForeground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{value || "—"}</Text>
       </View>
     </View>
   );
@@ -181,26 +181,27 @@ function TimeTile({ icon, label, value, tone }) {
 
 const styles = StyleSheet.create({
   hero: { backgroundColor: colors.navy, borderRadius: radius.lg, padding: 18, gap: 4, overflow: "hidden" },
-  heroGlow: { position: "absolute", width: 200, height: 200, borderRadius: 100, right: -70, top: -100, backgroundColor: "rgba(59,130,246,0.28)" },
-  heroTitle: { fontSize: 24, fontWeight: "600", letterSpacing: -0.4, color: "#FFFFFF" },
+  heroGlow: { position: "absolute", width: 200, height: 200, borderRadius: 100, right: -70, top: -100, backgroundColor: "rgba(212,250,60,0.16)" },
+  heroTitle: { fontSize: 24, lineHeight: 30, fontWeight: "600", letterSpacing: -0.4, color: "#FFFFFF" },
   heroSubtitle: { fontSize: 13, lineHeight: 18, color: "rgba(255,255,255,0.75)" },
-  heroStats: { flexDirection: "row", gap: 8, marginTop: 12 },
-  heroStat: { flex: 1, paddingVertical: 10, paddingHorizontal: 10, borderRadius: radius.md, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", gap: 2 },
+  heroStats: { flexDirection: "row", flexWrap: "wrap", columnGap: 8, rowGap: 8, marginTop: 12 },
+  heroStat: { flexGrow: 1, flexShrink: 1, flexBasis: 64, minWidth: 64, paddingVertical: 10, paddingHorizontal: 8, borderRadius: radius.md, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", gap: 2 },
   heroDot: { width: 8, height: 8, borderRadius: 4, marginBottom: 4 },
-  heroStatValue: { fontSize: 22, fontWeight: "600", color: "#FFFFFF" },
-  heroStatLabel: { fontSize: 11, fontWeight: "600", color: "rgba(255,255,255,0.8)" },
+  heroStatValue: { fontSize: 22, lineHeight: 28, fontWeight: "600", color: "#FFFFFF" },
+  heroStatLabel: { fontSize: 11, lineHeight: 15, fontWeight: "600", color: "rgba(255,255,255,0.8)" },
   calendarCard: { padding: 14 },
   dayCard: { gap: 12 },
-  dayIcon: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  dayChip: { flexShrink: 0, maxWidth: "45%", marginLeft: 8 },
+  dayIcon: { flexShrink: 0, width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   session: { gap: 10 },
   timeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  timeTile: { width: "48.5%", flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: radius.md },
-  timeIcon: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
-  timeLabel: { fontSize: 11, fontWeight: "600", color: colors.mutedForeground },
-  timeValue: { fontSize: 15, fontWeight: "600", color: colors.foreground },
-  workedBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, paddingHorizontal: 14, borderRadius: radius.md, backgroundColor: colors.primarySoft },
-  workedLabel: { fontSize: 14, fontWeight: "600", color: colors.primary },
-  workedValue: { fontSize: 16, fontWeight: "600", color: colors.navy },
+  timeTile: { flexGrow: 1, flexShrink: 1, flexBasis: "46%", minWidth: 140, flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: radius.md },
+  timeIcon: { flexShrink: 0, width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  timeLabel: { fontSize: 11, lineHeight: 15, fontWeight: "600", color: colors.mutedForeground },
+  timeValue: { fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.foreground },
+  workedBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: radius.md, backgroundColor: colors.primarySoft },
+  workedLabel: { fontSize: 14, lineHeight: 19, fontWeight: "600", color: colors.primary },
+  workedValue: { flexShrink: 0, fontSize: 16, lineHeight: 22, fontWeight: "600", color: colors.navy },
   emptyDay: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: radius.md, backgroundColor: colors.background },
 });
 

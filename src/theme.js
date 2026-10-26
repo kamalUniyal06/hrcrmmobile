@@ -1,16 +1,17 @@
-// Brand palette: primary is a lighter take on the HRCRM logo blue (logo ~#0068F8),
-// with the web app's lime as the accent. Status greens (success) stay green.
+// Brand palette: the web app's official "HRCRM" theme (index.css [data-theme="hrcrm"]):
+// deep green primary, near-black-to-green sidebar, lime highlight. Status colours stay semantic.
 export const colors = {
-  background: "#F8F9FF",
-  // Deep midnight navy for hero banners and the main timer ("Kinetic Executive" look).
-  navy: "#0D1B2A",
-  navySoft: "#1B2B3D",
+  background: "#F7F8F6",
+  // Dark ink for hero banners, the side menu and the main timer (web --sidebar-primary).
+  navy: "#0B1310",
+  navySoft: "#064030",
   foreground: "#0B1310",
   card: "#FFFFFF",
-  primary: "#3B82F6",
-  primaryDeep: "#2563EB",
+  primary: "#09533D",
+  primaryDeep: "#064030",
   primaryForeground: "#FFFFFF",
-  primarySoft: "#EBF3FF",
+  primarySoft: "#E7F2EC",
+  accentSoft: "#F0FBC9",
   lime: "#D4FA3C",
   oliveLime: "#8FA61B",
   sidebar: "#0B1310",
@@ -18,9 +19,9 @@ export const colors = {
   success: "#10B981",
   successSoft: "#D1FAE5",
   teal: "#3DA9A5",
-  muted: "#ECEFEC",
-  mutedForeground: "#5F6670",
-  border: "rgba(0,0,0,0.10)",
+  muted: "#EFF2EE",
+  mutedForeground: "#6A7074",
+  border: "#DCE3D9",
   destructive: "#D4183D",
   destructiveSoft: "#FCE4EA",
   attention: "#B45309",

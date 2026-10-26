@@ -27,7 +27,7 @@ function AlertItem({ alert, busy, onAnswer }) {
       <Text style={type.subheading}>{plainText(alert.name) || "Notice"}</Text>
       {alert.description ? <Text style={type.body}>{plainText(alert.description)}</Text> : null}
       <Text style={type.small}>{formatDate(alert.date_entered)}</Text>
-      <Row>
+      <Row style={{ flexWrap: "wrap" }}>
         <Button title="Yes" small icon="checkmark" loading={busy} onPress={() => onAnswer("yes")} />
         <Button title="No" small variant="outline" icon="close" disabled={busy} onPress={() => onAnswer("no")} />
       </Row>

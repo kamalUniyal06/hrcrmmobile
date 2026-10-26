@@ -12,6 +12,10 @@ import { missingConfig } from "../../config";
 
 const GENDERS = ["Male", "Female", "Non-binary", "Other", "Prefer not to say"];
 
+// Side-by-side form fields wrap onto their own lines when large fonts make them too narrow.
+const PAIR_ROW = { flexWrap: "wrap", columnGap: 12, rowGap: 12 };
+const PAIR_FIELD = { flexGrow: 1, flexShrink: 1, flexBasis: 140, minWidth: 0 };
+
 export function CandidateProfileScreen({ navigation }) {
   const email = useEmail();
   const profile = useCandidateProfile();
@@ -32,10 +36,10 @@ export function CandidateProfileScreen({ navigation }) {
       <Card style={{ alignItems: "center", gap: 8, paddingVertical: 24 }}>
         <Avatar name={candidate ? fullName(candidate, email) : email} size={64} />
         <Text style={[type.heading, { textAlign: "center" }]} numberOfLines={2}>{candidate ? fullName(candidate, email) : email}</Text>
-        <Text style={[type.small, { textAlign: "center" }]} numberOfLines={1}>{email}</Text>
-        <Row style={{ flexWrap: "wrap", justifyContent: "center" }}>
+        <Text style={[type.small, { textAlign: "center", alignSelf: "stretch" }]} numberOfLines={1} ellipsizeMode="tail">{email}</Text>
+        <Row style={{ flexWrap: "wrap", justifyContent: "center", columnGap: 8, rowGap: 8, alignSelf: "stretch" }}>
           <Chip label="Candidate" tone="progress" />
-          {candidate?.hrc_stages_id_c_name ? <Chip label={candidate.hrc_stages_id_c_name} tone="lime" /> : null}
+          {candidate?.hrc_stages_id_c_name ? <Chip label={candidate.hrc_stages_id_c_name} tone="lime" style={{ maxWidth: "100%" }} /> : null}
         </Row>
         <Button title={candidate?.id ? "Edit profile" : "Set up profile"} icon="create-outline" small variant="secondary" onPress={() => navigation.navigate("CandidateProfileEdit")} />
       </Card>
@@ -89,7 +93,7 @@ function RelatedSection({ title, query, render, sub, chips }) {
       {items.length === 0 && !query.isPending ? (
         <Text style={type.small}>Nothing added yet. Complete this on app.hrcrm.ai with your resume.</Text>
       ) : chips ? (
-        <Row style={{ flexWrap: "wrap" }}>{items.map((item, index) => <Chip key={`${index}`} label={plainText(render(item)) || "Skill"} tone="neutral" />)}</Row>
+        <Row style={{ flexWrap: "wrap", columnGap: 8, rowGap: 8 }}>{items.map((item, index) => <Chip key={`${index}`} label={plainText(render(item)) || "Skill"} tone="neutral" style={{ maxWidth: "100%" }} />)}</Row>
       ) : (
         items.map((item, index) => (
           <Card key={item.id || index} style={{ gap: 2 }}>
@@ -143,21 +147,21 @@ export function CandidateProfileEditScreen({ navigation }) {
   return (
     <Screen>
       <Text style={type.small}>Your email ({email}) is linked to your login and cannot be changed here.</Text>
-      <Row>
-        <Field style={{ flex: 1 }} label={candidateFields.first_name} value={draft.first_name} onChangeText={update("first_name")} autoCapitalize="words" />
-        <Field style={{ flex: 1 }} label={candidateFields.last_name} value={draft.last_name} onChangeText={update("last_name")} autoCapitalize="words" />
+      <Row style={PAIR_ROW} align="flex-start">
+        <Field style={PAIR_FIELD} label={candidateFields.first_name} value={draft.first_name} onChangeText={update("first_name")} autoCapitalize="words" />
+        <Field style={PAIR_FIELD} label={candidateFields.last_name} value={draft.last_name} onChangeText={update("last_name")} autoCapitalize="words" />
       </Row>
       <Field label={candidateFields.phone_mobile} value={draft.phone_mobile} onChangeText={update("phone_mobile")} keyboardType="phone-pad" />
       <Field label={candidateFields.current_designation} value={draft.current_designation} onChangeText={update("current_designation")} placeholder="e.g. Frontend Developer" />
       <Field label={candidateFields.department} value={draft.department} onChangeText={update("department")} />
-      <Row>
-        <Field style={{ flex: 1 }} label={candidateFields.dob} value={draft.dob} onChangeText={update("dob")} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" />
-        <SelectField style={{ flex: 1 }} label={candidateFields.gender} value={draft.gender} onChange={update("gender")} options={GENDERS} />
+      <Row style={PAIR_ROW} align="flex-start">
+        <Field style={PAIR_FIELD} label={candidateFields.dob} value={draft.dob} onChangeText={update("dob")} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" />
+        <SelectField style={PAIR_FIELD} label={candidateFields.gender} value={draft.gender} onChange={update("gender")} options={GENDERS} />
       </Row>
       <Field label={candidateFields.primary_address_city} value={draft.primary_address_city} onChangeText={update("primary_address_city")} autoCapitalize="words" />
-      <Row>
-        <Field style={{ flex: 1 }} label={candidateFields.primary_address_state} value={draft.primary_address_state} onChangeText={update("primary_address_state")} autoCapitalize="words" />
-        <Field style={{ flex: 1 }} label={candidateFields.primary_address_country} value={draft.primary_address_country} onChangeText={update("primary_address_country")} autoCapitalize="words" />
+      <Row style={PAIR_ROW} align="flex-start">
+        <Field style={PAIR_FIELD} label={candidateFields.primary_address_state} value={draft.primary_address_state} onChangeText={update("primary_address_state")} autoCapitalize="words" />
+        <Field style={PAIR_FIELD} label={candidateFields.primary_address_country} value={draft.primary_address_country} onChangeText={update("primary_address_country")} autoCapitalize="words" />
       </Row>
       <Field label={candidateFields.linkedin_url} value={draft.linkedin_url} onChangeText={update("linkedin_url")} autoCapitalize="none" keyboardType="url" />
       <Field label={candidateFields.github_url} value={draft.github_url} onChangeText={update("github_url")} autoCapitalize="none" keyboardType="url" />

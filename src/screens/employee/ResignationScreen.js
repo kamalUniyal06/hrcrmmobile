@@ -93,7 +93,7 @@ export default function ResignationScreen({ navigation }) {
                 <View style={[styles.dot, done && styles.dotDone, current && styles.dotCurrent]}>
                   {done ? <Ionicons name="checkmark" size={11} color={colors.navy} /> : null}
                 </View>
-                <Text style={[styles.dotLabel, (done || current) && { color: "#FFFFFF" }]}>{item.title}</Text>
+                <Text style={[styles.dotLabel, (done || current) && { color: "#FFFFFF" }]} numberOfLines={2}>{item.title}</Text>
               </View>
             );
           })}
@@ -164,19 +164,19 @@ function StepIcon({ icon, tone }) {
 
 const styles = StyleSheet.create({
   hero: { backgroundColor: colors.navy, borderRadius: radius.lg, padding: 18, gap: 14, overflow: "hidden" },
-  heroGlow: { position: "absolute", width: 200, height: 200, borderRadius: 100, right: -70, top: -100, backgroundColor: "rgba(59,130,246,0.28)" },
+  heroGlow: { position: "absolute", width: 200, height: 200, borderRadius: 100, right: -70, top: -100, backgroundColor: "rgba(212,250,60,0.16)" },
   heroRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  heroIcon: { width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.primary },
+  heroIcon: { flexShrink: 0, width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.primary },
   heroTitle: { fontSize: 20, lineHeight: 26, fontWeight: "600", color: "#FFFFFF" },
   heroSubtitle: { fontSize: 13, lineHeight: 18, color: "rgba(255,255,255,0.65)" },
   track: { height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" },
   trackFill: { height: 6, borderRadius: 3, backgroundColor: colors.primary },
-  stepDots: { flexDirection: "row", justifyContent: "space-between" },
-  stepDot: { flexDirection: "row", alignItems: "center", gap: 6 },
-  dot: { width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.3)" },
+  stepDots: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", columnGap: 12, rowGap: 8 },
+  stepDot: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1, minWidth: 0 },
+  dot: { flexShrink: 0, width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.3)" },
   dotDone: { backgroundColor: colors.lime, borderColor: colors.lime },
-  dotCurrent: { borderColor: colors.primary, backgroundColor: "rgba(59,130,246,0.35)" },
-  dotLabel: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: "rgba(255,255,255,0.55)" },
+  dotCurrent: { borderColor: colors.primary, backgroundColor: "rgba(9,83,61,0.35)" },
+  dotLabel: { flexShrink: 1, fontSize: 12, lineHeight: 16, fontWeight: "600", color: "rgba(255,255,255,0.55)" },
   stepCard: { alignItems: "center", gap: 10, paddingVertical: 24, paddingHorizontal: 20 },
   stepIcon: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 4 },
   stepEyebrow: { ...type.tiny, color: colors.primary, letterSpacing: 0.8 },
