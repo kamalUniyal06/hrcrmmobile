@@ -14,7 +14,7 @@ const cursorFor = (value) => {
   return match ? { year: Number(match[1]), month: Number(match[2]) - 1 } : { year: now.getFullYear(), month: now.getMonth() };
 };
 
-export default function DateField({ label, value, onChange, placeholder = "Any date", minKey, maxKey, clearable = true, disabled = false, style }) {
+export default function DateField({ label, value, onChange, placeholder = "Any date", minKey, maxKey, clearable = true, disabled = false, allowWeekends = false, style }) {
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(() => cursorFor(value));
   const move = (delta) =>
@@ -49,6 +49,7 @@ export default function DateField({ label, value, onChange, placeholder = "Any d
             selected={value || undefined}
             minKey={minKey || undefined}
             maxKey={maxKey || undefined}
+            allowWeekends={allowWeekends}
             onSelectDay={(key) => {
               onChange(key);
               setOpen(false);

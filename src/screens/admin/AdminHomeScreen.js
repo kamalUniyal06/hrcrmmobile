@@ -5,8 +5,10 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, tones, type } from "../../theme";
-import { Avatar, Card, ListRow, PageHeader, Screen, SegmentedControl, StatTile } from "../../components/ui";
+import { Avatar, Card, ListRow, PageHeader, Screen, SegmentedControl, SkeletonRows, StatTile } from "../../components/ui";
 import TodayAttendanceCard from "../../components/TodayAttendanceCard";
+import { PendingAlertsCard } from "../../components/AlertsPrompt";
+import { useAuthStore } from "../../store/authStore";
 import { CardHead, MiniCount } from "../../components/home/HomeCardParts";
 import HiringPipelineCard from "../../components/home/HiringPipelineCard";
 import IncrementRequestsCard from "../../components/home/IncrementRequestsCard";
@@ -37,6 +39,7 @@ const ATTENTION_TABS = [
 
 export default function AdminHomeScreen({ navigation }) {
   const email = useEmail();
+  const isEmployee = useAuthStore((state) => state.userInfo?.phase === "Employment");
   const me = useMyEmployeeRecord();
   const limits = useAttendanceLimits();
   const today = todayKey();
@@ -131,10 +134,12 @@ export default function AdminHomeScreen({ navigation }) {
     queryClient.invalidateQueries({ queryKey: ["system-alerts"] });
     queryClient.invalidateQueries({ queryKey: ["increment-admin"] });
   };
-  // Feed rows open the leave request, the alerts page or the employee who checked in.
+  // Feed rows open the leave request, the full announcement or the employee who checked in.
   const openFeedItem = (item) => {
     const person = item.email ? employeesByEmail.get(item.email) : null;
+    const alert = item.alertId ? (announcements.data || []).find((record) => record.id === item.alertId) : null;
     if (item.leaveId) navigation.navigate("LeaveDetail", { id: item.leaveId });
+    else if (alert) navigation.navigate("AnnouncementDetail", { alert, manage: true });
     else if (item.alertId) navigation.navigate("SystemAlerts");
     else if (person) navigation.navigate("EmployeeDetail", { id: person.id });
     else navigation.navigate("Attendance");
@@ -160,13 +165,15 @@ export default function AdminHomeScreen({ navigation }) {
         showTitle
       />
 
-      <TodayAttendanceCard />
+      {/* Web AdminHomePage: alerts waiting for this admin, and their own shift only when they are also an employee. */}
+      <PendingAlertsCard onSeeAll={() => navigation.navigate("MyAlerts")} />
+      {isEmployee ? <TodayAttendanceCard /> : null}
 
       <View style={styles.statGrid}>
-        <StatTile label="Active employees" value={employees.isPending ? "—" : todayStats.total} hint="View directory" icon="people-outline" tone="neutral" onPress={() => navigation.navigate("People")} />
-        <StatTile label="Average check-in" value={loadingToday ? "—" : formatClock(todayStats.avgCheckIn)} hint={`Shift starts ${limits.actualLoginTime}`} icon="log-in-outline" tone="success" onPress={() => navigation.navigate("Attendance")} />
-        <StatTile label="On-time arrival" value={loadingToday || todayStats.onTimeRate === null ? "—" : `${todayStats.onTimeRate}%`} hint={`Late after ${lateAfterLabel}`} icon="alarm-outline" tone="attention" onPress={() => navigation.navigate("Attendance", { filter: "onTime" })} />
-        <StatTile label="Pending leave" value={leaves.isPending ? "—" : pendingLeaves.length} hint="Awaiting approval" icon="calendar-outline" tone="info" onPress={() => navigation.navigate("Approvals")} />
+        <StatTile label="Active employees" loading={employees.isPending} value={employees.isPending ? "—" : todayStats.total} hint="View directory" icon="people-outline" tone="neutral" onPress={() => navigation.navigate("People")} />
+        <StatTile label="Average check-in" loading={loadingToday} value={loadingToday ? "—" : formatClock(todayStats.avgCheckIn)} hint={`Shift starts ${limits.actualLoginTime}`} icon="log-in-outline" tone="success" onPress={() => navigation.navigate("Attendance")} />
+        <StatTile label="On-time arrival" loading={loadingToday} value={loadingToday || todayStats.onTimeRate === null ? "—" : `${todayStats.onTimeRate}%`} hint={`Late after ${lateAfterLabel}`} icon="alarm-outline" tone="attention" onPress={() => navigation.navigate("Attendance", { filter: "onTime" })} />
+        <StatTile label="Pending leave" loading={leaves.isPending} value={leaves.isPending ? "—" : pendingLeaves.length} hint="Awaiting approval" icon="calendar-outline" tone="info" onPress={() => navigation.navigate("Approvals")} />
       </View>
 
       <Card style={{ gap: 12 }}>
@@ -177,7 +184,7 @@ export default function AdminHomeScreen({ navigation }) {
           onChange={setPeopleTab}
         />
         {loadingToday ? (
-          <Text style={type.small}>Loading today's attendance…</Text>
+          <SkeletonRows count={3} label="Loading today's attendance" />
         ) : people.length === 0 ? (
           <View style={styles.allClear}>
             <Ionicons name="checkmark-circle-outline" size={18} color={colors.primary} style={styles.noShrink} />
@@ -222,8 +229,8 @@ export default function AdminHomeScreen({ navigation }) {
           </Pressable>
         </View>
         <View style={styles.offboardingStats}>
-          <MiniCount dot="#F59E0B" label="Awaiting approvals" value={offboarding.pending} onPress={() => navigation.navigate("Offboarding", { status: "pending" })} />
-          <MiniCount dot={colors.primary} label="Checkout in progress" value={offboarding.progress} onPress={() => navigation.navigate("Offboarding", { status: "progress" })} />
+          <MiniCount dot="#F59E0B" label="Awaiting approvals" loading={resignations.isPending} value={offboarding.pending} onPress={() => navigation.navigate("Offboarding", { status: "pending" })} />
+          <MiniCount dot={colors.primary} label="Checkout in progress" loading={resignations.isPending} value={offboarding.progress} onPress={() => navigation.navigate("Offboarding", { status: "progress" })} />
         </View>
         {offboarding.open.slice(0, 3).map(({ record, state }) => {
           // Resignation records store the employee's email in `name`; show their directory name when known.

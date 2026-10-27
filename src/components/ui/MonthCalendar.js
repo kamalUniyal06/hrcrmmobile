@@ -3,11 +3,14 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, type } from "../../theme";
 import { dateKey, monthLabel, WEEKDAY_LABELS } from "../../utils/dates";
 
+const WEEKEND = new Set([0, 6]);
+
 /**
  * Month grid. `markers[dayKey]` = { tone, label } colours the cell;
- * `selected` / `rangeStart` / `rangeEnd` are "YYYY-MM-DD" keys.
+ * `selected` / `rangeStart` / `rangeEnd` are "YYYY-MM-DD" keys; `isDisabled(key)` blocks extra days (e.g. holidays).
+ * Saturdays and Sundays show as off and cannot be picked unless `allowWeekends` is set.
  */
-export default function MonthCalendar({ year, month, onPrev, onNext, markers = {}, selected, rangeStart, rangeEnd, onSelectDay, minKey, maxKey, legend }) {
+export default function MonthCalendar({ year, month, onPrev, onNext, markers = {}, selected, rangeStart, rangeEnd, onSelectDay, minKey, maxKey, isDisabled, allowWeekends = false, legend }) {
   const first = new Date(year, month, 1);
   const offset = (first.getDay() + 6) % 7; // Monday first
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -16,6 +19,7 @@ export default function MonthCalendar({ year, month, onPrev, onNext, markers = {
   for (let day = 1; day <= daysInMonth; day += 1) cells.push(new Date(year, month, day));
   while (cells.length % 7) cells.push(null);
   const today = dateKey(new Date());
+  const legendItems = [...(legend || []), ...(!allowWeekends && !(legend || []).some((item) => item.tone === "weekend") ? [{ label: "Weekend (off)", tone: "weekend" }] : [])];
 
   return (
     <View style={styles.wrap}>
@@ -25,8 +29,8 @@ export default function MonthCalendar({ year, month, onPrev, onNext, markers = {
         <Pressable onPress={onNext} hitSlop={10} style={styles.navButton}><Ionicons name="chevron-forward" size={18} color={colors.foreground} /></Pressable>
       </View>
       <View style={styles.weekRow}>
-        {WEEKDAY_LABELS.map((label) => (
-          <Text key={label} style={styles.weekday} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{label}</Text>
+        {WEEKDAY_LABELS.map((label, index) => (
+          <Text key={label} style={[styles.weekday, !allowWeekends && index >= 5 && styles.weekendLabel]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{label}</Text>
         ))}
       </View>
       <View style={styles.grid}>
@@ -34,11 +38,14 @@ export default function MonthCalendar({ year, month, onPrev, onNext, markers = {
           if (!date) return <View key={`empty-${index}`} style={styles.cell} />;
           const key = dateKey(date);
           const marker = markers[key];
-          const disabled = (minKey && key < minKey) || (maxKey && key > maxKey);
+          // Saturday and Sunday are off: greyed and not selectable, unless the day carries real
+          // data (e.g. attendance on a worked weekend) or the calendar allows weekends.
+          const weekendOff = !allowWeekends && WEEKEND.has(date.getDay()) && (!marker || marker.tone === "weekend");
+          const disabled = weekendOff || (minKey && key < minKey) || (maxKey && key > maxKey) || Boolean(isDisabled?.(key));
           const inRange = rangeStart && rangeEnd && key >= rangeStart && key <= rangeEnd;
           const isEdge = key === rangeStart || key === rangeEnd || key === selected;
-          const bg = isEdge ? colors.primary : inRange ? colors.primarySoft : marker ? markerColor(marker.tone) : "transparent";
-          const fg = isEdge ? "#fff" : marker && !inRange ? markerText(marker.tone) : disabled ? colors.border : colors.foreground;
+          const bg = isEdge ? colors.primary : weekendOff ? markerColor("weekend") : inRange ? colors.primarySoft : marker ? markerColor(marker.tone) : "transparent";
+          const fg = isEdge ? "#fff" : weekendOff ? colors.mutedForeground : marker && !inRange ? markerText(marker.tone) : disabled ? colors.border : colors.foreground;
           return (
             <Pressable key={key} disabled={disabled || !onSelectDay} onPress={() => onSelectDay?.(key)} style={styles.cell}>
               <View style={[styles.day, { backgroundColor: bg }, key === today && !isEdge && styles.today]}>
@@ -48,9 +55,9 @@ export default function MonthCalendar({ year, month, onPrev, onNext, markers = {
           );
         })}
       </View>
-      {legend ? (
+      {legendItems.length ? (
         <View style={styles.legend}>
-          {legend.map((item) => (
+          {legendItems.map((item) => (
             <View key={item.label} style={styles.legendItem}>
               <View style={[styles.swatch, { backgroundColor: markerColor(item.tone) }]} />
               <Text style={[type.small, { flexShrink: 1 }]}>{item.label}</Text>
@@ -76,6 +83,7 @@ const styles = StyleSheet.create({
   navButton: { flexShrink: 0, width: 32, height: 32, borderRadius: 16, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" },
   weekRow: { flexDirection: "row" },
   weekday: { flex: 1, textAlign: "center", fontSize: 11, lineHeight: 15, fontWeight: "600", color: colors.mutedForeground },
+  weekendLabel: { color: colors.destructive, opacity: 0.7 },
   grid: { flexDirection: "row", flexWrap: "wrap" },
   cell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 2 },
   day: { flex: 1, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },

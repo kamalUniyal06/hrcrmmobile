@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { colors, type } from "../../theme";
-import { Button, Card, Chip, EmptyState, ErrorState, Field, LoadingState, Notice, Row, Screen, SectionTitle } from "../../components/ui";
+import { Button, Card, Chip, EmptyState, ErrorState, Field, LoadingState, Notice, Row, Screen, SectionTitle, Skeleton } from "../../components/ui";
 import {
   clearRememberedIncrement, createIncrement, createIncrementReply, fetchCurrentSalary, fetchMyIncrements,
   getPendingIncrement, getRememberedIncrementId, questionText, rememberIncrementId,
@@ -60,13 +60,20 @@ export default function IncrementScreen() {
 
   const currentQuestion = pending.data?.pendingQuestions?.[0];
   const expectedNumber = Number(clean(expected).replace(/,/g, ""));
-  const validExpected = Number.isFinite(expectedNumber) && expectedNumber > 0;
+  // Web IncrementRequestPage: the expected salary must be above the current one.
+  const currentAmount = Number(salary.data?.amount) || 0;
+  const validExpected = Number.isFinite(expectedNumber) && expectedNumber > 0 && expectedNumber > currentAmount;
+  const expectedError = clean(expected) && !validExpected ? "Expected salary must be greater than your current salary." : undefined;
 
   return (
     <Screen>
       <Card style={{ backgroundColor: colors.sidebar, borderColor: colors.sidebar }}>
         <Text style={[type.tiny, { color: colors.lime }]}>Current annual salary</Text>
-        <Text style={[type.title, { color: "#fff", fontSize: 30, lineHeight: 38 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{salary.isPending ? "…" : `₹ ${money(salary.data?.amount)}`}</Text>
+        {salary.isPending ? (
+          <Skeleton width="55%" height={30} radius={8} style={{ marginVertical: 4, backgroundColor: "rgba(255,255,255,0.12)" }} />
+        ) : (
+          <Text style={[type.title, { color: "#fff", fontSize: 30, lineHeight: 38 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>₹ {money(salary.data?.amount)}</Text>
+        )}
         <Text style={[type.small, { color: "rgba(255,255,255,0.7)" }]}>
           {salary.data?.isFallback ? "No salary record found; showing a reference amount." : `₹ ${money(salary.data?.monthlyAmount)} per month`}
         </Text>
@@ -97,7 +104,7 @@ export default function IncrementScreen() {
         <View style={{ gap: 10 }}>
           <SectionTitle title="Request an increment" hint="Tell HR the annual salary you expect, then answer a few questions." />
           <Card>
-            <Field label="Expected annual salary (₹)" value={expected} onChangeText={setExpected} keyboardType="numeric" placeholder="e.g. 600000" />
+            <Field label="Expected annual salary (₹)" value={expected} onChangeText={setExpected} keyboardType="numeric" placeholder="e.g. 600000" error={expectedError} />
             {validExpected && salary.data?.amount ? (
               <Text style={type.small}>That is {Math.round(((expectedNumber - salary.data.amount) / salary.data.amount) * 100)}% more than your current salary.</Text>
             ) : null}
@@ -109,7 +116,7 @@ export default function IncrementScreen() {
       <View style={{ gap: 10 }}>
         <SectionTitle title="Previous requests" />
         {history.isPending ? (
-          <Text style={type.small}>Loading…</Text>
+          <LoadingState rows={2} label="Loading your requests" />
         ) : (history.data || []).length === 0 ? (
           <EmptyState icon="trending-up-outline" title="No requests yet" message="Your increment requests will be listed here." />
         ) : (

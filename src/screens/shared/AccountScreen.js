@@ -1,10 +1,11 @@
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, shadow, tones, type } from "../../theme";
 import { Button, Card, Chip, Notice, Row, Screen, SectionTitle } from "../../components/ui";
 import { selectRole, useAuthStore } from "../../store/authStore";
 import { missingConfig } from "../../config";
 import { initials } from "../../utils/records";
+import { confirmLogout } from "../../utils/confirmLogout";
 
 const ROLE_LABEL = { admin: "Admin", employee: "Employee", candidate: "Candidate" };
 const HERO_BANDS = Array.from({ length: 10 }, (_, index) => (index + 1) / 10);
@@ -21,16 +22,12 @@ export default function AccountScreen({ navigation, route }) {
   const userInfo = useAuthStore((state) => state.userInfo);
   const role = useAuthStore(selectRole);
   const signOut = useAuthStore((state) => state.signOut);
-  const links = route?.params?.links || [];
+  const links = (route?.params?.links || []).filter((link) => !link.employeeOnly || userInfo?.phase === "Employment");
   const missing = missingConfig();
   const handle = String(user?.email || "").split("@")[0];
   const displayName = handle ? handle.charAt(0).toUpperCase() + handle.slice(1) : "Profile";
 
-  const confirmSignOut = () =>
-    Alert.alert("Sign out?", "You will need to sign in with Google or Microsoft again.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Sign out", style: "destructive", onPress: () => signOut() },
-    ]);
+  const confirmSignOut = () => confirmLogout(signOut);
 
   const details = [
     { icon: "mail", tone: "info", label: "Email", value: user?.email },
@@ -67,6 +64,27 @@ export default function AccountScreen({ navigation, route }) {
           ) : null}
         </Row>
       </View>
+
+      {/* Full profile (about, details, experience, education, skills, photo), as on the web Profile page. */}
+      {role !== "candidate" ? (
+        <Pressable
+          onPress={() => navigation.navigate("MyProfile")}
+          accessibilityRole="button"
+          accessibilityLabel="My profile"
+          style={({ pressed }) => [styles.profileCard, pressed && { opacity: 0.8 }]}
+        >
+          <View style={styles.profileIcon}>
+            <Ionicons name="id-card" size={22} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.profileTitle} numberOfLines={2}>My profile</Text>
+            <Text style={type.small} numberOfLines={2}>View and edit your about, details, experience, education, skills and photo</Text>
+          </View>
+          <View style={styles.profileChevron}>
+            <Ionicons name="chevron-forward" size={16} color={colors.primaryForeground} />
+          </View>
+        </Pressable>
+      ) : null}
 
       {missing.length ? (
         <Notice tone="closed" icon="key-outline" title="App keys missing" message={`Requests will fail until ${missing.join(" and ")} are set in .env.`} />
@@ -146,6 +164,10 @@ const styles = StyleSheet.create({
   email: { fontSize: 14, lineHeight: 19, color: "rgba(255,255,255,0.75)", maxWidth: "100%", textAlign: "center" },
   stageChip: { flexShrink: 1, maxWidth: "100%", paddingVertical: 5, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.18)" },
   stageText: { textAlign: "center", fontSize: 13, lineHeight: 18, fontWeight: "600", color: "#FFFFFF" },
+  profileCard: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 16, paddingHorizontal: 16, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.primary, ...shadow.card },
+  profileIcon: { flexShrink: 0, width: 46, height: 46, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
+  profileTitle: { fontSize: 17, lineHeight: 22, fontWeight: "600", color: colors.navy },
+  profileChevron: { flexShrink: 0, width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: colors.primary },
   listCard: { paddingVertical: 4, paddingHorizontal: 14, gap: 0 },
   rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
   shortcutList: { gap: 12 },

@@ -106,6 +106,7 @@ export function EmployeesScreen({ navigation, route }) {
               label={label}
               icon={icon}
               tone={tone}
+              loading={query.isPending}
               value={query.isPending ? "—" : count.toLocaleString()}
               onPress={selectable ? () => reset(() => setCardFilter(id)) : undefined}
               style={[styles.tile, selectable && cardFilter === id && styles.tileActive]}

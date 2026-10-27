@@ -5,7 +5,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, spacing, tones, type } from "../../theme";
-import { Button, Card, Chip, EmptyState, ErrorState, Field, LoadingState, Notice, PageHeader, Row, Screen, SearchField, SegmentedControl } from "../../components/ui";
+import { Button, Card, Chip, EmptyState, ErrorState, Field, LoadingState, Notice, PageHeader, Row, Screen, SearchField, SegmentedControl, Skeleton } from "../../components/ui";
 import { fetchLimitRecords, limitListKey, updateLimitRecord } from "../../api/limits.api";
 import { toast } from "../../store/toastStore";
 import { timeToMinutes } from "../../utils/attendance";
@@ -74,7 +74,7 @@ export function LimitManagementScreen({ navigation }) {
     <Screen refreshing={query.isFetching && !query.isPending} onRefresh={() => query.refetch()}>
       <PageHeader icon="speedometer-outline" tone="progress" eyebrow="People workspace" title="Limit management" subtitle="Time and workflow limits used across attendance and HR workflows." />
       <SearchField value={search} onChangeText={setSearch} placeholder="Search limits" />
-      <Text style={styles.count}>{query.isPending ? "Loading…" : `${records.length} of ${query.data?.length ?? 0} limits`}</Text>
+      {query.isPending ? <Skeleton width={120} height={12} /> : <Text style={styles.count}>{`${records.length} of ${query.data?.length ?? 0} limits`}</Text>}
 
       {query.isError ? (
         <ErrorState message={query.error.message} onRetry={() => query.refetch()} />

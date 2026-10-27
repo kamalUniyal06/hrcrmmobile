@@ -1,20 +1,28 @@
-// Candidate self-service: profile, related sections, jobs, applications, interviews.
-// Web sources: pages/profile/candidateApi.js, pages/jobs/jobsApi.js, pages/interviews/candidateInterviewData.js.
-import { gateway } from "../services/api";
+// Candidate self-service: profile, related sections, uploads, jobs, applications, interviews, Round 1 test.
+// Web sources: pages/profile/candidateApi.js, Profile.jsx (resume parsing), CandidatePhotoUpload.jsx,
+// governmentDocument.js, pages/jobs/jobsApi.js, pages/interviews/candidateInterviewData.js, candidateTest.api.js.
+import { fetchGpc, gateway } from "../services/api";
+import { clearCrmToken, getCrmToken } from "../services/crmAuth";
+import { CRM_URL, FETCH_GPC_X_API_KEY, RECRUITMENT_API_URL } from "../config";
 import { activeRecords, assertSuccess, clean, createdId, fetchAllPages, isDeleted, lower } from "../utils/records";
 import { interviewDate } from "../utils/dates";
+import { experienceDateForInput, governmentDocumentFileError, governmentIdError, governmentIdFields, normalizeCandidate, normalizeGovernmentId, normalizeResumeItems, photoFileError, resumeFileError } from "../utils/candidateProfile";
+import { readTestInvitation } from "../utils/candidateInvitation";
 
 export const candidateFields = {
   first_name: "First name",
   last_name: "Last name",
   email1: "Email",
-  phone_mobile: "Mobile phone",
-  current_designation: "Current designation",
+  phone_mobile: "Phone number",
+  current_designation: "Professional title",
+  title: "Title",
   department: "Department",
   dob: "Date of birth",
   gender: "Gender",
+  primary_address_street: "Street address",
   primary_address_city: "City",
-  primary_address_state: "State",
+  primary_address_state: "State / region",
+  primary_address_postalcode: "Postal code",
   primary_address_country: "Country",
   linkedin_url: "LinkedIn URL",
   github_url: "GitHub URL",
@@ -22,8 +30,9 @@ export const candidateFields = {
 };
 
 export const editableCandidateFields = [
-  "first_name", "last_name", "phone_mobile", "current_designation", "department", "dob", "gender",
-  "primary_address_city", "primary_address_state", "primary_address_country", "linkedin_url", "github_url", "description",
+  "first_name", "last_name", "phone_mobile", "current_designation", "dob", "gender",
+  "primary_address_street", "primary_address_city", "primary_address_state", "primary_address_postalcode", "primary_address_country",
+  "linkedin_url", "github_url", "description",
 ];
 
 export async function findCandidate(email) {
@@ -38,11 +47,17 @@ export async function findCandidate(email) {
   return record || null;
 }
 
-export async function saveCandidate(id, draft, email) {
-  const data = {};
-  for (const key of editableCandidateFields) if (Object.hasOwn(draft, key)) data[key] = clean(draft[key]);
-  data.email1 = email;
-  if (!id) data.candidate_source = "career_portal";
+/**
+ * Same payload as the web: the whole normalized profile (address, links, photo URL), the
+ * candidate source and, once the ID document was verified, the government ID fields.
+ * `identification` is { type, number }.
+ */
+export async function saveCandidate(id, draft, email, identification) {
+  const data = {
+    ...normalizeCandidate(draft, email),
+    candidate_source: draft?.candidate_source || "career_portal",
+    ...(identification ? governmentIdFields(identification.type, identification.number) : {}),
+  };
   const response = assertSuccess(
     await gateway({ action: id ? "update" : "create", module: "hrc_candidates", ...(id ? { id } : {}), data }),
     "Could not save your profile. Please try again.",
@@ -50,13 +65,136 @@ export async function saveCandidate(id, draft, email) {
   return { ...data, id: id || createdId(response) };
 }
 
+// ─── Skills, experience, education ────────────────────────────────────────────
+
 export const candidateRelatedModules = { skills: "hrc_skills", experiences: "hrc_experience", education: "hrc_education" };
+
+/** Fields the web writes for each related module. */
+export const relatedFields = {
+  education: ["name", "qualification", "institution", "university", "school", "board", "specialization", "percentage", "from_time", "to_time", "status", "description"],
+  experiences: ["name", "company_name", "company", "company_location", "position", "designation", "ctc", "joining_date", "leaving_date", "description", "responsibilities"],
+  skills: ["name", "skill_name", "skill", "version", "last_used", "total_years_total_months", "description"],
+};
+
+/** Shared cache key; experience entries carry normalized dates (matches the web key). */
+export const candidateRelatedKey = (candidateId, section) =>
+  section === "experiences" ? ["candidate-related", candidateId, section, "dates-mm-dd-yyyy-v2"] : ["candidate-related", candidateId, section];
 
 export async function fetchCandidateRelated(candidateId, section) {
   const related_module = candidateRelatedModules[section];
   if (!candidateId || !related_module) return [];
   const { records } = await fetchAllPages(gateway, { action: "fetch_related", module: "hrc_candidates", id: candidateId, related_module }, { perPage: 20 });
-  return records.map((item) => Object.fromEntries(Object.entries(item).map(([k, v]) => [k, v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v)])));
+  const items = normalizeResumeItems(records);
+  if (section !== "experiences") return items;
+  return items.map((item) => ({
+    ...item,
+    ...Object.fromEntries(["joining_date", "leaving_date"].filter((key) => Object.hasOwn(item, key)).map((key) => [key, experienceDateForInput(item[key])])),
+  }));
+}
+
+/** New skill / experience / education record linked to the candidate. */
+export async function createCandidateRelated(section, candidateId, item) {
+  const module = candidateRelatedModules[section];
+  if (!module || !candidateId) throw new Error("Save your personal information first.");
+  const data = Object.fromEntries(relatedFields[section].filter((key) => Object.hasOwn(item, key)).map((key) => [key, item[key]]));
+  data[`hrc_candidates_${module}_1hrc_candidates_ida`] = candidateId;
+  const response = await gateway({ action: "create", module, data });
+  if (response?.success !== true) throw new Error(response?.message || `Could not save ${section}.`);
+  const id = createdId(response);
+  if (!id) throw new Error("Save was accepted without a record ID. Reload to check the saved record before trying again.");
+  return { ...item, id };
+}
+
+/** Sends only the fields that changed since `original`; nothing when none did. */
+export async function saveCandidateRelated(section, item, original) {
+  const module = candidateRelatedModules[section];
+  if (!module || !item.id || item.id !== original?.id) throw new Error("The related record is missing its ID. Reload this section and retry.");
+  const data = Object.fromEntries(relatedFields[section].filter((key) => Object.hasOwn(item, key) && item[key] !== original[key]).map((key) => [key, item[key]]));
+  if (!Object.keys(data).length) return false;
+  const response = await gateway({ action: "update", module, id: item.id, data });
+  if (response?.success !== true) throw new Error(response?.message || `Could not save ${section}. Please retry. Earlier successful changes have been kept.`);
+  return true;
+}
+
+// ─── Uploads (hrc entry point) ────────────────────────────────────────────────
+
+const HRC_ENDPOINT = `${CRM_URL}?entryPoint=hrc`;
+
+// `file` is a picked document: { uri, name, size, type }.
+const filePart = (file, fallbackName, fallbackType) => ({ uri: file.uri, name: file.name || fallbackName, type: file.type || fallbackType });
+
+function hrcResult(response, fallback) {
+  if (response?.success !== true) {
+    throw new Error(typeof response?.message === "string" ? response.message : typeof response?.error === "string" ? response.error : fallback);
+  }
+  return response;
+}
+
+function requireUploadKey(what) {
+  if (!FETCH_GPC_X_API_KEY) throw new Error(`${what} is not configured. Please contact your administrator.`);
+}
+
+/**
+ * Resume upload: the CRM parses it into the candidate record (creating it when needed),
+ * including skills, experience and education. `stage` is one of candidateSources.
+ */
+export async function parseResume({ file, email, stage, jobId }) {
+  const fileError = resumeFileError(file);
+  if (fileError) throw new Error(fileError);
+  if (!email) throw new Error("Your login email is unavailable. Please sign in again.");
+  if (!stage) throw new Error("Select how you heard about us.");
+  requireUploadKey("Resume upload");
+  const body = new FormData();
+  body.append("file", filePart(file, "resume.pdf", "application/pdf"));
+  body.append("primary_email", email);
+  body.append("stage", stage);
+  if (jobId) body.append("job_record_id", jobId);
+  return hrcResult(
+    await fetchGpc({ endpoint: HRC_ENDPOINT, method: "POST", params: { type: "resume_parsing" }, body }),
+    "Couldn't read this resume. Try another file.",
+  );
+}
+
+/** Profile photo upload; returns the hosted image URL to save as `profile_image`. */
+export async function uploadCandidateImage({ file, email }) {
+  const fileError = photoFileError(file);
+  if (fileError) throw new Error(fileError);
+  if (!clean(email)) throw new Error("Enter the email associated with your candidate profile first.");
+  requireUploadKey("Photo upload");
+  const body = new FormData();
+  body.append("email", clean(email));
+  body.append("image", filePart(file, "candidate-photo.jpg", "image/jpeg"));
+  const response = hrcResult(
+    await fetchGpc({ endpoint: HRC_ENDPOINT, method: "POST", params: { type: "upload_candidate_image" }, body }),
+    "Could not upload your photo. Please try again.",
+  );
+  if (typeof response.image_url !== "string" || !/^https?:\/\/.+/i.test(response.image_url)) {
+    throw new Error("The upload did not return a valid image URL. Please try again.");
+  }
+  return response.image_url;
+}
+
+const documentTypes = { pan: "pan", aadhaar: "aadhaar", driving_licence: "dl" };
+
+/** Server-side OCR of a government ID image; returns the normalized number read from it. */
+export async function scanGovernmentDocument({ file, type }) {
+  const fileError = governmentDocumentFileError(file);
+  if (fileError) throw new Error(fileError);
+  const documentType = documentTypes[type];
+  if (!documentType) throw new Error("Choose a government ID type.");
+  requireUploadKey("ID verification");
+  const body = new FormData();
+  body.append("file", filePart(file, "government-id.jpg", "image/jpeg"));
+  body.append("document_type", documentType);
+  const result = hrcResult(
+    await fetchGpc({ endpoint: HRC_ENDPOINT, method: "POST", params: { type: "upload_doc" }, body }),
+    "Unable to scan this document. Please try a clearer image.",
+  );
+  if (result.document_type !== documentType) throw new Error("The scanned document type does not match your selection. Upload the correct ID.");
+  if (typeof result.document_number !== "string" || governmentIdError(type, result.document_number)) {
+    throw new Error("A valid document number could not be read. Please upload a clearer image.");
+  }
+  return normalizeGovernmentId(type, result.document_number);
 }
 
 /** Profile completeness, the way the candidate dashboard counts it. */
@@ -129,15 +267,15 @@ export function salaryRange(job) {
 }
 export const jobIsOpen = (job) => !/^(closed|inactive|filled|on[_ ]hold|archived)$/i.test(clean(job?.status));
 
-/** Where an application sits: index 0..3 in Applied → Review → Interview → Decision. */
+/** Where an application sits: index 0..3 in Applied → Review → Interview → Decision; `closed` once decided. */
 export function applicationStage(status) {
   const value = lower(status);
-  if (/^(accepted|hired|selected|joined|offer)/.test(value)) return { index: 3, tone: "success", label: "Selected", next: "HR will share the next steps with you." };
-  if (/^(rejected|withdrawn|declined|not[_ ]selected)/.test(value)) return { index: 3, tone: "closed", label: "Not selected", next: "No further steps." };
-  if (/interview/.test(value)) return { index: 2, tone: "progress", label: "Interview", next: "Check My interviews for your schedule." };
-  if (/shortlist/.test(value)) return { index: 2, tone: "progress", label: "Shortlisted", next: "Your interview will be scheduled soon." };
-  if (/review|screen/.test(value)) return { index: 1, tone: "progress", label: "In review", next: "A recruiter is reviewing your profile." };
-  return { index: 1, tone: "progress", label: "Applied", next: "Waiting for recruiter review." };
+  if (/^(accepted|hired|selected|joined|offer)/.test(value)) return { index: 3, tone: "success", closed: true, label: "Selected", next: "HR will share the next steps with you." };
+  if (/^(rejected|withdrawn|declined|not[_ ]selected)/.test(value)) return { index: 3, tone: "closed", closed: true, label: "Not selected", next: "No further steps." };
+  if (/interview/.test(value)) return { index: 2, tone: "progress", closed: false, label: "Interview", next: "Check My interviews for your schedule." };
+  if (/shortlist/.test(value)) return { index: 2, tone: "progress", closed: false, label: "Shortlisted", next: "Your interview will be scheduled soon." };
+  if (/review|screen/.test(value)) return { index: 1, tone: "progress", closed: false, label: "In review", next: "A recruiter is reviewing your profile." };
+  return { index: 1, tone: "progress", closed: false, label: "Applied", next: "Waiting for recruiter review." };
 }
 
 // ─── Interviews ───────────────────────────────────────────────────────────────
@@ -224,6 +362,71 @@ export function hiringProgress({ candidate, applications = [], interviews = [] }
               ? "Your profile has been received. Apply to an open role to move forward."
               : "Apply to an open role to start your hiring journey.";
   return { steps, message };
+}
+
+// ─── Round 1 test (recruitment backend) ───────────────────────────────────────
+
+export const recruitmentApiUrl = String(RECRUITMENT_API_URL || "").trim().replace(/\/+$/, "").replace(/\/admin(?:\/.*)?$/, "");
+
+/** One request to the recruitment backend, authorized with the HRCRM token (web services/recruitmentApi.js). */
+export async function recruitmentRequest(path, { token, params } = {}) {
+  const query = Object.entries(params || {})
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch(`${recruitmentApiUrl}${path}${query ? `?${query}` : ""}`, {
+      method: "GET",
+      signal: controller.signal,
+      headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success !== true) {
+      const error = new Error(
+        data?.code === "HRCRM_CANDIDATE_EMAIL_REQUIRED"
+          ? "You are signed in, but HR needs to enable test-link access. Please contact HR."
+          : response.status === 401 && token
+            ? "Your assessment connection could not be authorized. Retry, or sign in to HRCRM again."
+            : data?.error || data?.message || `Recruitment request failed (${response.status}). Please retry.`,
+      );
+      error.status = response.status;
+      error.code = data?.code;
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error("The recruitment request timed out. Refresh to try again.");
+    if (error instanceof TypeError) throw new Error("Could not reach the recruitment service. Check your connection.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * The signed-in candidate's Round 1 test link (web candidateTest.api.js): { status, url, expiresAt }.
+ * A 401 clears the CRM token and retries once with a fresh one.
+ */
+export async function fetchMyTestInvitation({ candidate, email }, now = Date.now()) {
+  const reference = clean(candidate?.id);
+  const loginEmail = lower(email);
+  if (!reference || !loginEmail || lower(candidate?.email1) !== loginEmail) {
+    throw new Error("Your candidate profile could not be verified. Refresh your profile and try again.");
+  }
+  let response;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const token = await getCrmToken();
+    try {
+      response = await recruitmentRequest("/integrations/hrcrm/my-invitation", { token, params: { external_reference: reference } });
+      break;
+    } catch (error) {
+      if (error.status !== 401 || attempt === 1) throw error;
+      clearCrmToken();
+    }
+  }
+  return readTestInvitation(response, { candidate, email }, now);
 }
 
 export { isDeleted, activeRecords };

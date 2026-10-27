@@ -3,7 +3,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, tones, type } from "../../theme";
-import { Button } from "../ui";
+import { Button, Skeleton } from "../ui";
 
 /** Card title with an optional topic `icon` (tinted by `tone`) and a "View all"-style link. */
 export function CardHead({ title, action, onAction, icon, tone = "progress" }) {
@@ -57,14 +57,18 @@ export function IconSquare({ icon, tone = "progress", size = 36 }) {
 }
 
 /** Small bordered count box; `dot` is the accent colour. */
-export function MiniCount({ dot, label, value, onPress }) {
+export function MiniCount({ dot, label, value, onPress, loading = false }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [styles.mini, pressed && { opacity: 0.8 }]}>
       <View style={styles.miniTop}>
         <View style={[styles.dot, { backgroundColor: dot }]} />
         <Text style={styles.miniLabel} numberOfLines={2}>{label}</Text>
       </View>
-      <Text style={styles.miniValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
+      {loading ? (
+        <Skeleton width="45%" height={22} style={{ marginTop: 4 }} />
+      ) : (
+        <Text style={styles.miniValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
+      )}
     </Pressable>
   );
 }

@@ -6,7 +6,7 @@ jest.mock('../src/services/api', () => ({ gateway: jest.fn(), http: jest.fn(), a
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { gateway } from '../src/services/api';
+import { fetchGpc, gateway } from '../src/services/api';
 import { useAuthStore } from '../src/store/authStore';
 import { ScreenChrome } from '../src/components/ui';
 
@@ -134,6 +134,8 @@ function signIn(role) {
 beforeEach(() => {
   jest.clearAllMocks();
   gateway.mockImplementation(async (body) => respond(body));
+  // hrc entry point: my_alerts returns the canned alerts as this employee's.
+  fetchGpc.mockImplementation(async ({ params } = {}) => (params?.type === 'my_alerts' ? { success: true, alerts: data.hrc_system_alert } : { success: true }));
 });
 
 describe('auth', () => {

@@ -3,7 +3,7 @@ import { Linking, StyleSheet, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, type } from "../../theme";
-import { Button, Card, Chip, ErrorState, ListRow, LoadingState, Notice, PageHeader, Row, Screen, SectionTitle } from "../../components/ui";
+import { Button, Card, Chip, ErrorState, ListRow, LoadingState, Notice, PageHeader, Row, Screen, SectionTitle, SkeletonRows } from "../../components/ui";
 import { useCandidateProfile, useEmail } from "../../hooks/queries";
 import { applicationStage, fetchJobApplications, fetchJobPostings, fetchMyInterviews, hiringProgress, jobTitle, needsProfile, nextInterview } from "../../api/candidate.api";
 import { formatDateTime, timeUntil } from "../../utils/dates";
@@ -66,11 +66,11 @@ export default function CandidateHomeScreen({ navigation }) {
       ) : null}
 
       <View style={{ gap: 10 }}>
-        <SectionTitle title="My applications" action="Browse jobs" onAction={() => navigation.navigate("Jobs")} />
+        <SectionTitle title="My applications" action={(applications.data?.records || []).length ? "View all" : "Browse jobs"} onAction={() => ((applications.data?.records || []).length ? navigation.navigate("MyApplications") : navigation.navigate("Jobs"))} />
         {!candidate?.id ? (
           <Text style={type.small}>Save your profile to start applying.</Text>
         ) : applications.isPending ? (
-          <Text style={type.small}>Loading…</Text>
+          <SkeletonRows count={2} label="Loading your applications…" />
         ) : (applications.data?.records || []).length === 0 ? (
           <Card>
             <Text style={type.subheading}>No applications yet</Text>
@@ -89,7 +89,7 @@ export default function CandidateHomeScreen({ navigation }) {
                 title={job ? jobTitle(job) : plainText(record.name) || "Application"}
                 subtitle={stage.next}
                 right={<Chip label={stage.label} tone={stage.tone} small style={{ flexShrink: 0 }} />}
-                onPress={job ? () => navigation.navigate("Jobs", { screen: "JobDetail", params: { id: job.id } }) : undefined}
+                onPress={() => navigation.navigate("MyApplications", { applicationId: record.id })}
               />
             );
           })

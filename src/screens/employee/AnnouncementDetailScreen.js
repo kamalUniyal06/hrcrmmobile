@@ -1,12 +1,16 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, type } from "../../theme";
-import { Card, EmptyState, Screen } from "../../components/ui";
+import { Button, Card, EmptyState, Screen } from "../../components/ui";
+import RichContent from "../../components/RichContent";
 import { formatDate } from "../../utils/dates";
-import { htmlBlocks, plainText } from "../../utils/records";
+import { plainText } from "../../utils/records";
 
-/** Full announcement opened from the home screen. `route.params.alert` is the record. */
-export default function AnnouncementDetailScreen({ route }) {
+/**
+ * Full announcement opened from a card. `route.params.alert` is the record; `manage` (admin home)
+ * adds a shortcut to the Announcements page.
+ */
+export default function AnnouncementDetailScreen({ route, navigation }) {
   const alert = route?.params?.alert;
   if (!alert) {
     return (
@@ -15,9 +19,6 @@ export default function AnnouncementDetailScreen({ route }) {
       </Screen>
     );
   }
-
-  // Paragraphs keep their breaks and HTML tables (e.g. team lists) stay tables.
-  const blocks = htmlBlocks(alert.description);
 
   return (
     <Screen>
@@ -36,58 +37,15 @@ export default function AnnouncementDetailScreen({ route }) {
         ) : null}
       </View>
 
+      {/* Paragraphs keep their breaks, pictures show at their own shape and tables stay tables. */}
       <Card style={styles.body}>
-        {blocks.length ? (
-          blocks.map((block, index) =>
-            block.type === "table" ? (
-              <DataTable key={index} header={block.header} rows={block.rows} />
-            ) : (
-              <Text key={index} style={styles.message} selectable>{block.text}</Text>
-            ),
-          )
-        ) : (
-          <Text style={type.small}>This announcement has no details.</Text>
-        )}
+        <RichContent value={alert.description} empty="This announcement has no details." />
       </Card>
-    </Screen>
-  );
-}
 
-const WIDE_COLUMN = 140;
-
-/**
- * Announcement table: navy header, zebra rows. Up to three columns share the card width;
- * wider tables scroll sideways with fixed-width columns so no cell is squeezed.
- */
-function DataTable({ header, rows }) {
-  const columns = Math.max(header?.length || 0, ...rows.map((row) => row.length), 1);
-  const scrolls = columns > 3;
-  const cellStyle = scrolls ? { width: WIDE_COLUMN } : { flex: 1 };
-  const pad = (cells) => Array.from({ length: columns }, (_, index) => cells[index] ?? "");
-
-  const table = (
-    <View style={[styles.table, scrolls && { width: WIDE_COLUMN * columns }]}>
-      {header ? (
-        <View style={[styles.tr, styles.thead]}>
-          {pad(header).map((cell, index) => (
-            <Text key={index} style={[styles.th, cellStyle]}>{cell}</Text>
-          ))}
-        </View>
+      {route?.params?.manage ? (
+        <Button title="Manage announcements" icon="settings-outline" variant="secondary" full onPress={() => navigation.navigate("SystemAlerts")} />
       ) : null}
-      {rows.map((row, rowIndex) => (
-        <View key={rowIndex} style={[styles.tr, rowIndex % 2 === 1 && styles.zebra, rowIndex > 0 && styles.rowLine]}>
-          {pad(row).map((cell, index) => (
-            <Text key={index} style={[styles.td, cellStyle, index === 0 && styles.firstCol]} selectable>{cell || "—"}</Text>
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-
-  return scrolls ? (
-    <ScrollView horizontal showsHorizontalScrollIndicator style={styles.tableScroll}>{table}</ScrollView>
-  ) : (
-    table
+    </Screen>
   );
 }
 
@@ -99,15 +57,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, lineHeight: 29, fontWeight: "600", letterSpacing: -0.3, color: "#FFFFFF" },
   datePill: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", maxWidth: "100%", marginTop: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.12)" },
   dateText: { flexShrink: 1, fontSize: 12, lineHeight: 16, fontWeight: "600", color: "#FFFFFF" },
-  body: { padding: 20, gap: 16 },
-  message: { fontSize: 15, lineHeight: 24, color: colors.foreground },
-  tableScroll: { marginHorizontal: -4 },
-  table: { borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
-  tr: { flexDirection: "row" },
-  thead: { backgroundColor: colors.navy },
-  th: { minWidth: 0, paddingVertical: 10, paddingHorizontal: 12, fontSize: 12, lineHeight: 16, fontWeight: "600", color: "#FFFFFF", textTransform: "uppercase", letterSpacing: 0.4 },
-  zebra: { backgroundColor: colors.background },
-  rowLine: { borderTopWidth: 1, borderTopColor: colors.border },
-  td: { minWidth: 0, paddingVertical: 10, paddingHorizontal: 12, fontSize: 14, lineHeight: 20, color: colors.foreground },
-  firstCol: { fontWeight: "600", color: colors.navy },
+  body: { padding: 20 },
 });

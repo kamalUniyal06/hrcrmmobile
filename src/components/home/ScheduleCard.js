@@ -1,12 +1,12 @@
 // "Upcoming": a day strip with that day's events (holidays, birthdays, work anniversaries, approved
 // leave) and the live company announcements. Web: components/home/ScheduleCard.jsx + AnnouncementDialog.
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, type } from "../../theme";
-import { Button, Card, SegmentedControl, Sheet } from "../ui";
-import { calendarDateKey, monthLabel, parseActivityTime, todayKey } from "../../utils/dates";
-import { plainText } from "../../utils/records";
+import { Card, SegmentedControl, SkeletonRows } from "../ui";
+import { calendarDateKey, isWeekend, monthLabel, parseActivityTime, todayKey } from "../../utils/dates";
+import { firstImage, plainText } from "../../utils/records";
 import { addDaysToKey, announcementPreview, scheduleEventsForDay, shortDate, upcomingScheduleEvents, weekdayOf } from "../../utils/homeDashboard";
 import { CardHead, EmptyLine, IconSquare, InlineError, SectionLabel } from "./HomeCardParts";
 
@@ -24,11 +24,10 @@ const postedDay = (alert) => parseActivityTime(alert.date_entered)?.date || cale
  * `sources` = { employees, holidays, leaves, leaveLabel } for scheduleEventsForDay; `announcements`
  * are the live system alerts. `announcementsError`/`onRetryAnnouncements` cover the alerts query.
  */
-export default function ScheduleCard({ sources, loading, error, onRetry, announcements = [], announcementsLoading, announcementsError, onRetryAnnouncements, navigation }) {
+export default function ScheduleCard({ sources, loading, error, onRetry, announcements = [], announcementsLoading, announcementsError, onRetryAnnouncements, navigation, admin = true }) {
   const [today] = useState(todayKey);
   const [selected, setSelected] = useState(today);
   const [tab, setTab] = useState("events");
-  const [openAlert, setOpenAlert] = useState(null);
   const days = Array.from({ length: STRIP }, (_, index) => addDaysToKey(selected, index - Math.floor(STRIP / 2)));
 
   const eventsFor = useMemo(() => {
@@ -42,7 +41,9 @@ export default function ScheduleCard({ sources, loading, error, onRetry, announc
   const upcoming = useMemo(() => (dayEvents.length ? [] : upcomingScheduleEvents(selected, eventsFor)), [dayEvents.length, eventsFor, selected]);
   const sortedAnnouncements = useMemo(() => [...announcements].sort((a, b) => postedAt(b) - postedAt(a)), [announcements]);
 
+  // Employees see the same card, but leave requests and employee profiles open only for admins.
   const openEvent = (event) => {
+    if (!admin) return;
     if (event.leaveId) navigation.navigate("LeaveDetail", { id: event.leaveId });
     else if (event.employeeId) navigation.navigate("EmployeeDetail", { id: event.employeeId });
   };
@@ -66,10 +67,11 @@ export default function ScheduleCard({ sources, loading, error, onRetry, announc
         {days.map((key) => {
           const active = key === selected;
           const hasEvents = !loading && eventsFor(key).length > 0;
+          const off = !active && isWeekend(key);
           return (
-            <Pressable key={key} onPress={() => setSelected(key)} accessibilityState={{ selected: active }} style={[styles.day, active && styles.dayActive]}>
+            <Pressable key={key} onPress={() => setSelected(key)} accessibilityState={{ selected: active }} style={[styles.day, off && styles.dayOff, active && styles.dayActive]}>
               <Text style={[styles.dayNumber, active && { color: colors.primaryForeground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{key.slice(8, 10)}</Text>
-              <Text style={[styles.dayName, active && { color: "rgba(255,255,255,0.8)" }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{weekdayOf(key)}</Text>
+              <Text style={[styles.dayName, off && styles.dayNameOff, active && { color: "rgba(255,255,255,0.8)" }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{weekdayOf(key)}</Text>
               <View style={[styles.dayDot, hasEvents && { backgroundColor: active ? colors.lime : colors.primary }]} />
             </Pressable>
           );
@@ -89,16 +91,16 @@ export default function ScheduleCard({ sources, loading, error, onRetry, announc
         error ? (
           <InlineError message="Holidays or leave could not be loaded." onRetry={onRetry} />
         ) : loading ? (
-          <EmptyLine>Loading the schedule…</EmptyLine>
+          <SkeletonRows avatar={false} label="Loading the schedule" />
         ) : dayEvents.length ? (
-          dayEvents.map((event) => <EventRow key={event.id} event={event} onPress={openEvent} />)
+          dayEvents.map((event) => <EventRow key={event.id} event={event} onPress={admin ? openEvent : null} />)
         ) : (
           <>
             <EmptyLine>Nothing scheduled for {shortDate(selected)}.</EmptyLine>
             {upcoming.length ? (
               <>
                 <SectionLabel>Coming up</SectionLabel>
-                {upcoming.map(({ event, key }) => <EventRow key={`${key}:${event.id}`} event={event} date={key} onPress={openEvent} />)}
+                {upcoming.map(({ event, key }) => <EventRow key={`${key}:${event.id}`} event={event} date={key} onPress={admin ? openEvent : null} />)}
               </>
             ) : null}
           </>
@@ -106,16 +108,21 @@ export default function ScheduleCard({ sources, loading, error, onRetry, announc
       ) : announcementsError ? (
         <InlineError message="Announcements could not be loaded." onRetry={onRetryAnnouncements} />
       ) : announcementsLoading ? (
-        <EmptyLine>Loading announcements…</EmptyLine>
+        <SkeletonRows avatar={false} label="Loading announcements" />
       ) : sortedAnnouncements.length ? (
         sortedAnnouncements.map((alert) => {
           const preview = announcementPreview(alert.description);
+          const image = firstImage(alert.description);
           const day = postedDay(alert);
           return (
-            <Pressable key={alert.id} onPress={() => setOpenAlert(alert)} style={({ pressed }) => [styles.item, pressed && { backgroundColor: colors.muted }]}>
-              <Ionicons name="megaphone-outline" size={16} color={colors.primary} style={{ marginTop: 2, flexShrink: 0 }} />
+            <Pressable key={alert.id} onPress={() => navigation.navigate("AnnouncementDetail", { alert, manage: admin })} style={({ pressed }) => [styles.item, pressed && { backgroundColor: colors.muted }]}>
+              {image ? (
+                <Image source={{ uri: image }} style={styles.thumb} resizeMode="cover" accessibilityIgnoresInvertColors />
+              ) : (
+                <Ionicons name="megaphone-outline" size={16} color={colors.primary} style={{ marginTop: 2, flexShrink: 0 }} />
+              )}
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                <Text style={type.subheading}>{plainText(alert.name) || "Announcement"}</Text>
+                <Text style={type.subheading} numberOfLines={2}>{plainText(alert.name) || "Announcement"}</Text>
                 {preview ? <Text style={styles.sub} numberOfLines={2}>{preview}</Text> : null}
                 <Text style={styles.readMore}>Read announcement</Text>
               </View>
@@ -126,32 +133,13 @@ export default function ScheduleCard({ sources, loading, error, onRetry, announc
       ) : (
         <EmptyLine>No announcements right now.</EmptyLine>
       )}
-
-      <Sheet visible={Boolean(openAlert)} onClose={() => setOpenAlert(null)} title="Announcement" scroll={false}>
-        {openAlert ? (
-          <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={styles.sheetBody}>
-            <Text style={type.heading}>{plainText(openAlert.name) || "Announcement"}</Text>
-            {postedDay(openAlert) ? <Text style={type.small}>Posted {shortDate(postedDay(openAlert))}</Text> : null}
-            <Text style={type.body}>{plainText(openAlert.description) || "No details were added."}</Text>
-            <Button
-              title="Manage system alerts"
-              variant="secondary"
-              icon="settings-outline"
-              onPress={() => {
-                setOpenAlert(null);
-                navigation.navigate("SystemAlerts");
-              }}
-            />
-          </ScrollView>
-        ) : null}
-      </Sheet>
     </Card>
   );
 }
 
 function EventRow({ event, date, onPress }) {
   const meta = EVENT_META[event.type];
-  const tappable = Boolean(event.leaveId || event.employeeId);
+  const tappable = Boolean(onPress && (event.leaveId || event.employeeId));
   return (
     <Pressable disabled={!tappable} onPress={() => onPress(event)} style={({ pressed }) => [styles.item, { alignItems: "center" }, pressed && { backgroundColor: colors.muted }]}>
       <IconSquare icon={meta.icon} tone={meta.tone} />
@@ -171,6 +159,8 @@ const styles = StyleSheet.create({
   strip: { flexDirection: "row", gap: 6 },
   day: { flex: 1, minWidth: 0, alignItems: "center", paddingHorizontal: 2, paddingTop: 8, paddingBottom: 6, gap: 1, borderRadius: radius.md },
   dayActive: { backgroundColor: colors.primary },
+  dayOff: { backgroundColor: colors.muted },
+  dayNameOff: { color: colors.destructive, opacity: 0.7 },
   dayNumber: { fontSize: 17, lineHeight: 22, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
   dayName: { fontSize: 11, lineHeight: 15, color: colors.mutedForeground },
   dayDot: { width: 5, height: 5, borderRadius: 3, marginTop: 2, backgroundColor: "transparent" },
@@ -179,5 +169,5 @@ const styles = StyleSheet.create({
   when: { flexShrink: 0, maxWidth: "30%", textAlign: "right" },
   detail: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.primary },
   readMore: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.primary, marginTop: 2 },
-  sheetBody: { gap: 10, paddingHorizontal: 16, paddingBottom: 8 },
+  thumb: { flexShrink: 0, width: 56, height: 56, borderRadius: radius.sm, backgroundColor: colors.muted },
 });

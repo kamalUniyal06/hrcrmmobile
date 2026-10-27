@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, tones, type } from "../theme";
-import { Button, Card, Row } from "./ui";
+import { Button, Card, Row, Skeleton } from "./ui";
 import { useAttendanceLimits, useDailyActivity } from "../hooks/queries";
 import { currentMinutesInIndia, formatDate, formatDuration, nowStampInIndia, parseActivityTime, todayInIndia } from "../utils/dates";
 
@@ -40,8 +40,23 @@ export default function TodayAttendanceCard() {
 
   if (isPending) {
     return (
+      // Shimmer in the card's own shape: header, timer and the four time slots.
       <Card style={styles.card}>
-        <TitleRow tone="neutral" label="Loading" subtitle="Checking today's attendance…" />
+        <View style={styles.titleRow} accessibilityRole="progressbar" accessibilityLabel="Checking today's attendance">
+          <Skeleton width={34} height={34} radius={radius.sm} />
+          <View style={{ flex: 1, gap: 6 }}>
+            <Skeleton height={13} width="45%" />
+            <Skeleton height={10} width="65%" />
+          </View>
+          <Skeleton width={70} height={22} radius={radius.pill} />
+        </View>
+        <View style={styles.timerRow}>
+          <Skeleton height={10} width={110} />
+          <Skeleton height={26} width={120} radius={8} />
+        </View>
+        <View style={styles.strip}>
+          {[0, 1, 2, 3].map((slot) => <Skeleton key={slot} height={44} radius={radius.sm} style={{ flex: 1, width: undefined }} />)}
+        </View>
       </Card>
     );
   }

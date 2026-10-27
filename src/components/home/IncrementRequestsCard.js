@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors } from "../../theme";
-import { Avatar, Card } from "../ui";
+import { Avatar, Card, SkeletonRows } from "../ui";
 import { requestIdentity, requestOverview, requestedAnnualSalary } from "../../api/increment.api";
 import { formatDate } from "../../utils/dates";
 import { EmptyLine, InlineError, InsightHead, MiniCount, ProgressBar, homeStyles } from "./HomeCardParts";
@@ -39,9 +39,9 @@ export default function IncrementRequestsCard({ requests, questions, nameFor, na
         onViewAll={() => openList()}
       />
       <View style={homeStyles.counts}>
-        <MiniCount dot={colors.primary} label="Total" value={blank ? "—" : overview.total} onPress={() => openList()} />
-        <MiniCount dot={COMPLETE_COLOR} label="Answered" value={blank ? "—" : overview.complete} onPress={() => openList({ filter: "complete" })} />
-        <MiniCount dot={AWAITING_COLOR} label="Awaiting" value={blank ? "—" : overview.awaiting} onPress={() => openList({ filter: "awaiting" })} />
+        <MiniCount dot={colors.primary} label="Total" loading={loading} value={blank ? "—" : overview.total} onPress={() => openList()} />
+        <MiniCount dot={COMPLETE_COLOR} label="Answered" loading={loading} value={blank ? "—" : overview.complete} onPress={() => openList({ filter: "complete" })} />
+        <MiniCount dot={AWAITING_COLOR} label="Awaiting" loading={loading} value={blank ? "—" : overview.awaiting} onPress={() => openList({ filter: "awaiting" })} />
       </View>
 
       {!blank && overview.total > 0 ? (
@@ -57,7 +57,7 @@ export default function IncrementRequestsCard({ requests, questions, nameFor, na
       {error ? (
         <InlineError message="Increment requests could not be loaded." onRetry={() => { requests.refetch(); questions.refetch(); }} />
       ) : loading ? (
-        <EmptyLine>Loading increment requests…</EmptyLine>
+        <SkeletonRows label="Loading increment requests" />
       ) : overview.rows.length === 0 ? (
         <EmptyLine>No increment requests yet. New requests from employees will appear here.</EmptyLine>
       ) : (

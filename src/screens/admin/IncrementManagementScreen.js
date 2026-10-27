@@ -154,9 +154,9 @@ function RequestList({ questions, onSelect, onQuestions, initialCompletion, init
   return (
     <>
       <View style={styles.tiles}>
-        <StatTile icon="file-tray-full-outline" label={hasSearchFilters ? "Matching requests" : "Total requests"} value={hasData ? overview.total.toLocaleString() : "—"} hint={countHint} onPress={hasData ? () => selectCompletion("all") : undefined} style={tile("all")} />
-        <StatTile icon="checkmark-circle-outline" tone="success" label="Fully answered" value={hasData ? overview.complete : "—"} hint={countHint} onPress={hasData ? () => selectCompletion("complete") : undefined} style={tile("complete")} />
-        <StatTile icon="hourglass-outline" tone="attention" label="Awaiting answers" value={hasData ? overview.awaiting : "—"} hint={countHint} onPress={hasData ? () => selectCompletion("awaiting") : undefined} style={tile("awaiting")} />
+        <StatTile loading={query.isPending} icon="file-tray-full-outline" label={hasSearchFilters ? "Matching requests" : "Total requests"} value={hasData ? overview.total.toLocaleString() : "—"} hint={countHint} onPress={hasData ? () => selectCompletion("all") : undefined} style={tile("all")} />
+        <StatTile loading={query.isPending} icon="checkmark-circle-outline" tone="success" label="Fully answered" value={hasData ? overview.complete : "—"} hint={countHint} onPress={hasData ? () => selectCompletion("complete") : undefined} style={tile("complete")} />
+        <StatTile loading={query.isPending} icon="hourglass-outline" tone="attention" label="Awaiting answers" value={hasData ? overview.awaiting : "—"} hint={countHint} onPress={hasData ? () => selectCompletion("awaiting") : undefined} style={tile("awaiting")} />
         <StatTile icon="list-outline" tone="neutral" label="Questionnaire" value={questions.length} hint="View and edit questions" onPress={onQuestions} style={styles.tile} />
       </View>
 

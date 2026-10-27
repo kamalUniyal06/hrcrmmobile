@@ -1,15 +1,17 @@
 // Admin attendance dashboard: one day for every employee, with the month drawer per person.
 // Web: employement/components/attendance/AdminAttendanceDashboard.jsx.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, shadow, type } from "../../theme";
-import { Avatar, Button, EmptyState, ErrorState, Notice, PageHeader, Screen, SearchField, Sheet } from "../../components/ui";
+import { Avatar, Button, EmptyState, ErrorState, LoadingState, Notice, PageHeader, Screen, SearchField, Sheet, Skeleton } from "../../components/ui";
 import MonthCalendar from "../../components/ui/MonthCalendar";
 import { ClockInOut, Legend, LunchInOut, StatusPill, StatusTag } from "../../components/attendance/AttendanceStatus";
 import DayDetailSheet from "../../components/attendance/DayDetailSheet";
 import EmployeeAttendanceDrawer from "../../components/attendance/EmployeeAttendanceDrawer";
+import { TeamsActivitySheet, TeamsChip, TeamsSummaryCard, useTeamsPresenceDay } from "../../components/attendance/TeamsPresence";
+import { indexPresence, presenceForRow } from "../../utils/teamsPresence";
 import { fetchAttendanceStats, getOrgActivityForDay } from "../../api/dailyActivity.api";
 import { getLeavesOnDay } from "../../api/leaves.api";
 import { useAttendanceLimits, useEmployeesDirectory } from "../../hooks/queries";
@@ -50,6 +52,13 @@ export default function AdminAttendanceScreen({ navigation, route }) {
   const leaves = useQuery({ queryKey: ["leaves", "attendance", "day", activityDay], queryFn: () => getLeavesOnDay(activityDay), staleTime: 5 * 60 * 1000 });
   const stats = useQuery({ queryKey: ["attendance", "stats", activityDay], queryFn: () => fetchAttendanceStats(activityDay), refetchInterval: 60000 });
 
+  // Teams presence (read-only): live status for today, the stored daily report for other days.
+  const teamsLive = activityDay === today;
+  const teams = useTeamsPresenceDay(activityDay, { live: teamsLive });
+  const presenceIndex = useMemo(() => indexPresence(teams.data?.employees), [teams.data]);
+  const teamsState = teams.isPending ? "loading" : teams.isError ? "error" : "ready";
+  const [teamsFor, setTeamsFor] = useState(null);
+
   const rows = useMemo(() => buildAttendanceRows(employees.data || [], activity.data || []), [employees.data, activity.data]);
   const leaveDays = useMemo(() => buildLeaveDays(leaves.data || []), [leaves.data]);
   const isOnLeave = useCallback((row, day) => isRowOnLeave(leaveDays, row, day), [leaveDays]);
@@ -76,7 +85,7 @@ export default function AdminAttendanceScreen({ navigation, route }) {
   const pageRows = visible.slice(0, shown);
   const loading = employees.isPending || leaves.isPending || activity.isPending;
   const failed = employees.isError || activity.isError || leaves.isError;
-  const fetching = employees.isFetching || activity.isFetching || leaves.isFetching || stats.isFetching;
+  const fetching = employees.isFetching || activity.isFetching || leaves.isFetching || stats.isFetching || teams.isFetching;
 
   // Employees the drawer can step through with its previous/next buttons.
   const drawerRows = visible.filter((row) => row.matched);
@@ -103,6 +112,7 @@ export default function AdminAttendanceScreen({ navigation, route }) {
     activity.refetch();
     leaves.refetch();
     stats.refetch();
+    teams.refetch();
   };
 
   return (
@@ -139,7 +149,7 @@ export default function AdminAttendanceScreen({ navigation, route }) {
                 <Ionicons name={icon} size={19} color={palette.fg} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.tileValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{count ?? "—"}</Text>
+                {count === undefined && !stats.isError ? <Skeleton width="60%" height={22} radius={6} style={{ marginVertical: 2 }} /> : <Text style={styles.tileValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{count ?? "—"}</Text>}
                 <Text style={styles.tileLabel} numberOfLines={2}>{label}</Text>
               </View>
             </Pressable>
@@ -171,6 +181,7 @@ export default function AdminAttendanceScreen({ navigation, route }) {
           </Pressable>
         </View>
         <Legend />
+        <TeamsSummaryCard query={teams} live={teamsLive} />
         <SearchField
           value={search}
           onChangeText={(value) => {
@@ -184,10 +195,7 @@ export default function AdminAttendanceScreen({ navigation, route }) {
       {failed ? (
         <ErrorState message={employees.error?.message || activity.error?.message || leaves.error?.message || "Could not load attendance."} onRetry={refresh} />
       ) : loading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.primary} />
-          <Text style={type.small}>Loading employee attendance…</Text>
-        </View>
+        <LoadingState label="Loading employee attendance…" variant="cards" rows={4} />
       ) : !pageRows.length ? (
         <EmptyState icon="people-outline" title={search ? "No matching employees" : "No employees or attendance found"} message={search ? "Try another name or email." : "Records will appear here when available."} />
       ) : (
@@ -201,6 +209,8 @@ export default function AdminAttendanceScreen({ navigation, route }) {
             const summary = daySummary(records, activityDay, today, onLeave, lateAfter);
             const halfDay = isOnHalfDay(row);
             const rowLeave = onLeave ? leaveForRow(leaves.data || [], row, activityDay) : null;
+            const presence = presenceForRow(presenceIndex, row);
+            const employeeId = row.key.startsWith("employee:") ? row.key.slice("employee:".length) : "";
             return (
               <EmployeeCard
                 key={row.key}
@@ -215,6 +225,14 @@ export default function AdminAttendanceScreen({ navigation, route }) {
                 active={drawerKey === row.key}
                 onOpen={row.matched ? () => setDrawerKey(row.key) : undefined}
                 onStatus={records.length || rowLeave ? () => setSelected({ key: row.key, date: activityDay, records, leave: rowLeave }) : undefined}
+                teams={
+                  <TeamsChip
+                    record={presence}
+                    live={teamsLive}
+                    state={teamsState}
+                    onPress={presence && employeeId ? () => setTeamsFor({ employeeId, name: row.name, date: activityDay }) : undefined}
+                  />
+                }
               />
             );
           })}
@@ -237,6 +255,8 @@ export default function AdminAttendanceScreen({ navigation, route }) {
 
       <DayDetailSheet selected={selected} row={selectedRow} today={today} lateAfter={lateAfter} onClose={() => setSelected(null)} />
 
+      <TeamsActivitySheet target={teamsFor} today={today} onClose={() => setTeamsFor(null)} />
+
       <Sheet visible={picking} onClose={() => setPicking(false)} title="Choose a date">
         <DatePicker
           value={activityDay}
@@ -251,7 +271,7 @@ export default function AdminAttendanceScreen({ navigation, route }) {
   );
 }
 
-function EmployeeCard({ row, records, summary, status, halfDay, onLeave, isToday, lunchLimit, active, onOpen, onStatus }) {
+function EmployeeCard({ row, records, summary, status, halfDay, onLeave, isToday, lunchLimit, active, onOpen, onStatus, teams }) {
   return (
     <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [styles.row, active && styles.rowActive, pressed && { backgroundColor: colors.muted }]}>
       <View style={styles.rowHead}>
@@ -281,6 +301,7 @@ function EmployeeCard({ row, records, summary, status, halfDay, onLeave, isToday
             <LunchInOut sessions={summary.sessions} limit={lunchLimit} />
           </View>
         </View>
+        {teams}
       </View>
       <View style={styles.rowFoot}>
         <View style={styles.loginFrom}>
@@ -343,7 +364,6 @@ const styles = StyleSheet.create({
   dayText: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.navy, flexShrink: 1, textAlign: "center" },
   todayButton: { flexShrink: 0, minHeight: 34, paddingHorizontal: 12, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
   todayText: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.foreground },
-  loading: { alignItems: "center", gap: 8, padding: 40 },
   countLabel: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.mutedForeground },
   row: { gap: 10, padding: 14, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card },
   rowActive: { borderColor: colors.primary, backgroundColor: "#F3F8F5" },

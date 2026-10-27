@@ -3,16 +3,29 @@
 // components/ui/table/Table.jsx, components/detail/blocks, components/create + components/edit).
 // Columns, fields and labels all come from the flexibility layout metadata.
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, spacing, tones, type } from "../../theme";
-import { Button, Card, Chip, EmptyState, ErrorState, Field, KeyValue, LoadingState, Notice, PageHeader, Row, Screen, SelectField } from "../../components/ui";
+import { Button, Card, Chip, EmptyState, ErrorState, Field, IconButton, KeyValue, LoadingState, Notice, PageHeader, Row, Screen, SegmentedControl, SelectField, Sheet } from "../../components/ui";
 import { createEntity, fetchEntityPage, fetchEntityRecord, fetchLayout, nextPageOf, updateEntity } from "../../api/entity.api";
+import { fetchEntityStats, runActionRequest } from "../../api/entityActions.api";
 import { getActiveUiModule, setActiveUiModule } from "../../services/crmClient";
 import { toast } from "../../store/toastStore";
 import { formatDate, formatDateTime } from "../../utils/dates";
 import { clean, errorMessage, plainText, readable } from "../../utils/records";
+import {
+  activeFilterCount,
+  filterColumnsOf,
+  isActionDisabled,
+  isStatusActive,
+  layoutActions,
+  mobileRouteFor,
+  normalizeStatuses,
+  sortableColumns,
+  statusCount,
+  toggleStatusFilters,
+} from "../../utils/entityList";
 
 /* ── Layout metadata helpers ────────────────────────────────────────────── */
 
@@ -154,6 +167,85 @@ const useLayout = (module, viewKey, enabled = true) =>
 
 const hasEditableFields = (layout) => layoutSections(layout).some((section) => section.fields.some(isEditable));
 
+const actionKey = (action) => String(action?.id || action?.key || action?.label || action?.target || "");
+const actionLabel = (action) => clean(action?.label) || readable(action?.type) || "Action";
+
+/**
+ * Runs layout actions (web ActionEngine): "navigate" opens the matching phone screen and
+ * "mutation" sends its request, then refreshes this module. "modal" and "callback" rely on
+ * web-only components / registered handlers and are reported as web-only.
+ */
+function useLayoutActions({ navigation, module, title, uiModuleId }) {
+  const queryClient = useQueryClient();
+  const [running, setRunning] = useState(null);
+
+  const execute = async (action, record, base) => {
+    if (action.type === "navigate") {
+      const route = mobileRouteFor(action, record, { base, module, title, uiModuleId });
+      if (route) navigation?.navigate(route.name, route.params);
+      else toast.info("This link only opens in the web app.");
+      return;
+    }
+    if (action.type !== "mutation") {
+      toast.info(`"${actionLabel(action)}" is only available in the web app.`);
+      return;
+    }
+    setRunning(actionKey(action));
+    try {
+      const response = await runActionRequest({ action, record, context: { entity: module } });
+      if (response?.success === false || response?.status === false) throw new Error(response.message || response.error || "The action failed.");
+      toast.success(clean(action.successMessage) || `${actionLabel(action)}: done.`);
+      await queryClient.invalidateQueries({ queryKey: ["entity", module] });
+    } catch (error) {
+      toast.error(errorMessage(error, "The action failed."));
+    } finally {
+      setRunning(null);
+    }
+  };
+
+  const run = (action, record, base) => {
+    if (!action || isActionDisabled(action, record)) return;
+    if (action.confirm?.enabled) {
+      Alert.alert(clean(action.confirm.title) || "Are you sure?", clean(action.confirm.description) || undefined, [
+        { text: "Cancel", style: "cancel" },
+        { text: actionLabel(action), onPress: () => execute(action, record, base) },
+      ]);
+      return;
+    }
+    execute(action, record, base);
+  };
+
+  return { run, running };
+}
+
+const actionIcon = (action) => (action.type === "navigate" ? "open-outline" : action.type === "mutation" ? "flash-outline" : "desktop-outline");
+
+/** Sheet listing one record's actions. */
+function ActionSheet({ target, onClose, onRun }) {
+  const actions = target ? layoutActions(target.actions, target.record) : [];
+  return (
+    <Sheet visible={Boolean(target)} onClose={onClose} title="Actions">
+      {actions.length ? actions.map((action) => {
+        const disabled = isActionDisabled(action, target.record);
+        return (
+          <Pressable
+            key={actionKey(action)}
+            disabled={disabled}
+            onPress={() => {
+              onClose();
+              onRun(action, target.record);
+            }}
+            style={({ pressed }) => [styles.sheetOption, pressed && { backgroundColor: colors.muted }, disabled && { opacity: 0.45 }]}
+          >
+            <Ionicons name={actionIcon(action)} size={18} color={colors.primary} style={{ flexShrink: 0 }} />
+            <Text style={[type.body, { flex: 1, minWidth: 0 }]}>{actionLabel(action)}</Text>
+          </Pressable>
+        );
+      }) : <Text style={[type.small, { padding: spacing.lg }]}>No actions are available for this record.</Text>}
+    </Sheet>
+  );
+}
+
 /* ── List ───────────────────────────────────────────────────────────────── */
 
 const isDateColumn = (column) => /date|time_ago|_at$/i.test(column.accessor) || DATE_TYPES.has(typeOf(column)) || DATETIME_TYPES.has(typeOf(column));
@@ -168,7 +260,9 @@ function cardColumns(columns) {
   return { title, subtitles: plain.filter((column) => column !== title).slice(0, 2), date: date !== title ? date : null, status };
 }
 
-function EntityCard({ record, card, dropdowns, onPress }) {
+const isActionsColumn = (column) => typeOf(column) === "actions" || typeOf(column) === "action" || Array.isArray(column?.actions);
+
+function EntityCard({ record, card, dropdowns, onPress, onActions }) {
   const title = card.title ? displayValue(card.title, record, null, dropdowns) : "";
   const subtitle = card.subtitles.map((column) => displayValue(column, record, null, dropdowns)).filter(Boolean).join(" · ");
   const date = card.date ? displayValue(card.date, record, null, dropdowns) : "";
@@ -188,8 +282,154 @@ function EntityCard({ record, card, dropdowns, onPress }) {
           </Row>
         ) : null}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} style={{ flexShrink: 0 }} />
+      {onActions ? (
+        <IconButton icon="ellipsis-vertical" size={18} color={colors.mutedForeground} label="Record actions" onPress={onActions} />
+      ) : (
+        <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} style={{ flexShrink: 0 }} />
+      )}
     </Pressable>
+  );
+}
+
+/** Status tabs with counts (web StatusRow). Tapping the active tab clears it. */
+function StatusTabs({ statuses, filters, summary, loading, onToggle }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statusTabs} accessibilityRole="tablist">
+      {statuses.map((status) => {
+        const active = isStatusActive(filters, status);
+        const color = status.color || "#64748b";
+        return (
+          <Pressable
+            key={status.key}
+            onPress={() => onToggle(status)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            style={({ pressed }) => [styles.statusTab, active && { borderColor: color, backgroundColor: colors.card }, pressed && { opacity: 0.8 }]}
+          >
+            <View style={[styles.statusDot, { backgroundColor: color }]} />
+            <Text style={[styles.statusLabel, active && { color: colors.foreground }]} numberOfLines={1}>{status.label}</Text>
+            <Text style={styles.statusCount}>{loading ? "…" : statusCount(summary, status.key)}</Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+/** Column filters (web FilterColumn): one choice per column, applied as soon as it is picked. */
+function FilterSheet({ visible, onClose, title, columns, filters, onChange }) {
+  const set = (accessor, value) => {
+    const next = { ...filters };
+    if (value === undefined || filters[accessor] === value) delete next[accessor];
+    else next[accessor] = value;
+    onChange(next);
+  };
+  const count = activeFilterCount(filters, columns);
+  return (
+    <Sheet visible={visible} onClose={onClose} title={`Filter ${title || "records"}`}>
+      <View style={{ paddingHorizontal: spacing.lg, gap: spacing.lg, paddingBottom: spacing.md }}>
+        {columns.map((column) => (
+          <View key={column.accessor} style={{ gap: spacing.sm }}>
+            <Row>
+              <Text style={[type.subheading, { flex: 1, minWidth: 0 }]}>{column.label}</Text>
+              {filters[column.accessor] !== undefined ? (
+                <Pressable onPress={() => set(column.accessor)} hitSlop={8}><Text style={styles.link}>Clear</Text></Pressable>
+              ) : null}
+            </Row>
+            <View style={styles.optionWrap}>
+              {column.values.map((item) => {
+                const selected = filters[column.accessor] === item.value;
+                return (
+                  <Pressable
+                    key={String(item.value)}
+                    onPress={() => set(column.accessor, item.value)}
+                    accessibilityState={{ selected }}
+                    style={[styles.option, selected && styles.optionSelected]}
+                  >
+                    {selected ? <Ionicons name="checkmark" size={14} color={colors.primary} /> : null}
+                    <Text style={[styles.optionText, selected && { color: colors.primary }]} numberOfLines={1}>{item.label || String(item.value)}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ))}
+        <Row>
+          <Button
+            title="Clear all"
+            variant="outline"
+            small
+            disabled={!count}
+            style={{ flex: 1 }}
+            onPress={() => {
+              const next = { ...filters };
+              columns.forEach((column) => delete next[column.accessor]);
+              onChange(next);
+            }}
+          />
+          <Button title="Done" small style={{ flex: 1 }} onPress={onClose} />
+        </Row>
+      </View>
+    </Sheet>
+  );
+}
+
+/** Sort picker (web SortDropDown): a sortable column and a direction, applied on "Apply". */
+function SortSheet({ visible, onClose, columns, sort, onApply }) {
+  const [draft, setDraft] = useState(sort);
+  useEffect(() => {
+    if (visible) setDraft(sort);
+  }, [visible, sort]);
+  return (
+    <Sheet visible={visible} onClose={onClose} title="Sort">
+      <View style={{ gap: spacing.md, paddingBottom: spacing.md }}>
+        <View>
+          {columns.map((column) => {
+            const selected = draft.orderBy === column.accessor;
+            return (
+              <Pressable
+                key={column.accessor}
+                onPress={() => setDraft((current) => ({ ...current, orderBy: column.accessor }))}
+                style={({ pressed }) => [styles.sheetOption, pressed && { backgroundColor: colors.muted }]}
+              >
+                <Text style={[type.body, { flex: 1, minWidth: 0 }, selected && { color: colors.primary, fontWeight: "600" }]}>{fieldLabel(column)}</Text>
+                {selected ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
+          <SegmentedControl
+            value={draft.orderDir || "DESC"}
+            onChange={(orderDir) => setDraft((current) => ({ ...current, orderDir }))}
+            options={[{ label: "Ascending", value: "ASC" }, { label: "Descending", value: "DESC" }]}
+          />
+          <Row>
+            <Button
+              title="Clear sort"
+              variant="outline"
+              small
+              disabled={!sort.orderBy && !draft.orderBy}
+              style={{ flex: 1 }}
+              onPress={() => {
+                onApply({ orderBy: "", orderDir: "DESC" });
+                onClose();
+              }}
+            />
+            <Button
+              title="Apply"
+              small
+              disabled={!draft.orderBy}
+              style={{ flex: 1 }}
+              onPress={() => {
+                onApply({ orderBy: draft.orderBy, orderDir: draft.orderDir || "DESC" });
+                onClose();
+              }}
+            />
+          </Row>
+        </View>
+      </View>
+    </Sheet>
   );
 }
 
@@ -211,15 +451,43 @@ export function EntityListScreen({ route, navigation }) {
   const gatewayModule = layout.data?.module || module;
   const config = layout.data?.config || {};
 
+  // Web table preferences: filters (status tabs + filter sheet) and sorting.
+  const [filters, setFilters] = useState({});
+  const [sort, setSort] = useState({ orderBy: "", orderDir: "DESC" });
+  const [sheet, setSheet] = useState(null); // "filter" | "sort" | null
+  const [actionsFor, setActionsFor] = useState(null);
+  const actions = useLayoutActions({ navigation, module, title, uiModuleId });
+
   const records = useInfiniteQuery({
-    queryKey: ["entity", module, "list", gatewayModule, search],
-    queryFn: ({ pageParam }) => fetchEntityPage({ module: gatewayModule, page: pageParam, search, filters: layout.data?.dataFilters || {} }),
+    queryKey: ["entity", module, "list", gatewayModule, search, filters, sort],
+    queryFn: ({ pageParam }) =>
+      fetchEntityPage({
+        module: gatewayModule,
+        page: pageParam,
+        search,
+        // Web buildTableRequestBody: the layout's data filters, then the user's.
+        filters: { ...(layout.data?.dataFilters || {}), ...filters },
+        orderBy: sort.orderBy || undefined,
+        orderDir: sort.orderDir,
+      }),
     initialPageParam: 1,
     getNextPageParam: nextPageOf,
     enabled: layout.isSuccess,
   });
 
-  const columns = useMemo(() => byRank(config.columns).filter((column) => column?.accessor), [config.columns]);
+  const statuses = useMemo(() => normalizeStatuses(config.statusConfig), [config.statusConfig]);
+  const rawFilterColumns = config.filterColumns;
+  const filterColumns = useMemo(() => filterColumnsOf({ filterColumns: rawFilterColumns }), [rawFilterColumns]);
+  const stats = useQuery({
+    queryKey: ["entity", module, "stats", gatewayModule, search, filters, sort],
+    queryFn: () => fetchEntityStats({ statuses, module: gatewayModule, filters, search, orderBy: sort.orderBy || undefined, orderDir: sort.orderDir }),
+    enabled: layout.isSuccess && statuses.length > 0,
+  });
+
+  const allColumns = useMemo(() => byRank(config.columns).filter((column) => column?.accessor || isActionsColumn(column)), [config.columns]);
+  const actionsColumn = allColumns.find(isActionsColumn);
+  const columns = useMemo(() => allColumns.filter((column) => column?.accessor && !isActionsColumn(column)), [allColumns]);
+  const sortable = useMemo(() => sortableColumns(columns), [columns]);
   const card = useMemo(() => cardColumns(columns), [columns]);
   const pages = records.data?.pages || [];
   const rows = pages.flatMap((page) => page.records);
@@ -227,6 +495,8 @@ export function EntityListScreen({ route, navigation }) {
   const total = Number(pages[0]?.total ?? pages[0]?.pagination?.total) || 0;
   const searchEnabled = config.search?.enabled !== false;
   const canCreate = createLayout.isSuccess && hasEditableFields(createLayout.data);
+  const filterCount = activeFilterCount(filters, filterColumns);
+  const sortColumn = sortable.find((column) => column.accessor === sort.orderBy);
 
   useLayoutEffect(() => {
     navigation?.setOptions?.({
@@ -245,11 +515,31 @@ export function EntityListScreen({ route, navigation }) {
   if (layout.isError) return <Screen><ErrorState message={`Unable to load the layout. ${errorMessage(layout.error, "")}`.trim()} onRetry={() => layout.refetch()} /></Screen>;
 
   const countLabel = `${total ? `${rows.length} of ${total}` : `${rows.length}`} record${(total || rows.length) === 1 ? "" : "s"}`;
+  const filtered = Boolean(search) || Object.keys(filters).length > 0;
   const header = (
     <View style={{ gap: spacing.md, paddingBottom: spacing.sm }}>
       {records.isSuccess ? <PageHeader icon="albums" tone="progress" title={title || "Records"} subtitle={countLabel} /> : null}
+      {statuses.length ? (
+        <StatusTabs statuses={statuses} filters={filters} summary={stats.data} loading={stats.isPending} onToggle={(status) => setFilters((current) => toggleStatusFilters(current, statuses, status))} />
+      ) : null}
       {searchEnabled ? (
         <Field value={searchText} onChangeText={setSearchText} placeholder={clean(config.search?.placeholder) || `Search ${title || "records"}`} autoCapitalize="none" />
+      ) : null}
+      {filterColumns.length || sortable.length ? (
+        <Row style={{ flexWrap: "wrap" }}>
+          {filterColumns.length ? (
+            <Button title={filterCount ? `Filters (${filterCount})` : "Filters"} icon="funnel-outline" small variant={filterCount ? "secondary" : "outline"} onPress={() => setSheet("filter")} />
+          ) : null}
+          {sortable.length ? (
+            <Button
+              title={sortColumn ? `${fieldLabel(sortColumn)} ${sort.orderDir === "ASC" ? "↑" : "↓"}` : "Sort"}
+              icon="swap-vertical"
+              small
+              variant={sortColumn ? "secondary" : "outline"}
+              onPress={() => setSheet("sort")}
+            />
+          ) : null}
+        </Row>
       ) : null}
     </View>
   );
@@ -268,7 +558,10 @@ export function EntityListScreen({ route, navigation }) {
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
           refreshing={records.isRefetching && !records.isFetchingNextPage}
-          onRefresh={() => records.refetch()}
+          onRefresh={() => {
+            records.refetch();
+            if (statuses.length) stats.refetch();
+          }}
           onEndReachedThreshold={0.4}
           onEndReached={() => {
             if (records.hasNextPage && !records.isFetchingNextPage) records.fetchNextPage();
@@ -279,9 +572,10 @@ export function EntityListScreen({ route, navigation }) {
               card={card}
               dropdowns={dropdowns}
               onPress={() => navigation.navigate("EntityDetail", { module, id: item.id, title, uiModuleId })}
+              onActions={actionsColumn && layoutActions(actionsColumn.actions, item).length ? () => setActionsFor({ record: item, actions: actionsColumn.actions }) : undefined}
             />
           )}
-          ListEmptyComponent={<EmptyState title="No records" message={search ? "Nothing matches that search." : "There is nothing here yet."} />}
+          ListEmptyComponent={<EmptyState title="No records" message={filtered ? "Nothing matches the search or filters." : "There is nothing here yet."} />}
           ListFooterComponent={
             records.hasNextPage ? (
               <Button title="Load more" variant="outline" small loading={records.isFetchingNextPage} onPress={() => records.fetchNextPage()} style={{ alignSelf: "center", marginTop: spacing.sm }} />
@@ -289,6 +583,9 @@ export function EntityListScreen({ route, navigation }) {
           }
         />
       )}
+      <FilterSheet visible={sheet === "filter"} onClose={() => setSheet(null)} title={title} columns={filterColumns} filters={filters} onChange={setFilters} />
+      <SortSheet visible={sheet === "sort"} onClose={() => setSheet(null)} columns={sortable} sort={sort} onApply={setSort} />
+      <ActionSheet target={actionsFor} onClose={() => setActionsFor(null)} onRun={(action, record) => actions.run(action, record, `/${module}`)} />
     </Screen>
   );
 }
@@ -319,6 +616,7 @@ export function EntityDetailScreen({ route, navigation }) {
     queryFn: () => fetchEntityRecord({ module: recordModule, id, email }),
     enabled: layout.isSuccess && !!(id || email),
   });
+  const actions = useLayoutActions({ navigation, module, title, uiModuleId });
 
   if (layout.isPending || (layout.isSuccess && record.isPending)) return <Screen><LoadingState /></Screen>;
   if (layout.isError) return <Screen><ErrorState message={errorMessage(layout.error, "Unable to load the layout.")} onRetry={() => layout.refetch()} /></Screen>;
@@ -332,6 +630,8 @@ export function EntityDetailScreen({ route, navigation }) {
   const description = header.descriptionField ? displayValue(header.descriptionField, data, null, dropdowns) : "";
   const editAction = (header.actions || []).find((action) => action?.type === "navigate" && /(^|\/)edit$/.test(String(action.target || "")));
   const canEdit = !!editAction || hasEditableFields(layout.data);
+  // The other header actions (web ActionField in the detail header).
+  const headerActions = layoutActions(header.actions, data).filter((action) => action !== editAction);
 
   return (
     <Screen refreshing={record.isRefetching} onRefresh={() => record.refetch()}>
@@ -355,6 +655,22 @@ export function EntityDetailScreen({ route, navigation }) {
             style={styles.editButton}
             onPress={() => navigation.navigate("EntityForm", { module, id: data.id, title, uiModuleId, mode: "edit" })}
           />
+        ) : null}
+        {headerActions.length ? (
+          <Row style={{ flexWrap: "wrap" }}>
+            {headerActions.map((action) => (
+              <Button
+                key={actionKey(action)}
+                title={actionLabel(action)}
+                icon={actionIcon(action)}
+                small
+                variant={action.placement === "primary" ? "primary" : "outline"}
+                disabled={isActionDisabled(action, data) || (actions.running !== null && actions.running !== actionKey(action))}
+                loading={actions.running === actionKey(action)}
+                onPress={() => actions.run(action, data, `/${module}/${data.id}`)}
+              />
+            ))}
+          </Row>
         ) : null}
       </Card>
 
@@ -576,4 +892,15 @@ const styles = StyleSheet.create({
   stackedRow: { gap: 4, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   tabLabel: { ...type.tiny, color: colors.primary, marginTop: spacing.sm },
   switchRow: { justifyContent: "space-between", paddingVertical: 4 },
+  sheetOption: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.border },
+  link: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.primary },
+  statusTabs: { gap: spacing.sm, paddingRight: spacing.sm },
+  statusTab: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: 220, paddingVertical: 8, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.muted },
+  statusDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  statusLabel: { flexShrink: 1, fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.mutedForeground },
+  statusCount: { flexShrink: 0, fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
+  optionWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  option: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: "100%", paddingVertical: 7, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card },
+  optionSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  optionText: { flexShrink: 1, fontSize: 13, lineHeight: 18, color: colors.foreground },
 });

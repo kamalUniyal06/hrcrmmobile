@@ -2,7 +2,7 @@ import {
   calendarDateKey, eachDay, employeeDateKey, formatDate, formatHours, interviewDate, nowStampInIndia, parseActivityTime, timeUntil,
 } from '../src/utils/dates';
 import { daySummary, employeeAttendanceStats, holidayMapOf, leaveDaysOf, sessionSummary, timeToMinutes } from '../src/utils/attendance';
-import { activeRecords, errorMessage, fetchAllPages, fullName, htmlBlocks, initials, plainText, totalPagesOf } from '../src/utils/records';
+import { activeRecords, errorMessage, fetchAllPages, firstImage, fullName, htmlBlocks, initials, plainText, totalPagesOf } from '../src/utils/records';
 import { emailFromIdToken, withAccountChooser } from '../src/utils/oauthUrl';
 
 describe('dates', () => {
@@ -118,6 +118,7 @@ describe('oauthUrl', () => {
 });
 
 describe('htmlBlocks', () => {
+test('keeps pictures in order and finds the first one for card thumbnails', () => {    const html = '&lt;p&gt;Happy Diwali&lt;/p&gt;&lt;img src="https://cdn.example.com/diwali.png" alt=""&gt;&lt;p&gt;From HR&lt;/p&gt;&lt;img src="javascript:x"&gt;';    expect(htmlBlocks(html)).toEqual([      { type: 'text', text: 'Happy Diwali' },      { type: 'image', uri: 'https://cdn.example.com/diwali.png' },      { type: 'text', text: 'From HR' },    ]);    expect(firstImage(html)).toBe('https://cdn.example.com/diwali.png');    expect(firstImage('<p>No picture</p>')).toBe('');  });
   test('keeps tables as tables and the text around them as paragraphs', () => {
     const html = '<p>Dear All,</p><p>Teams are below.</p><table><tr><th>Team</th><th>Members</th></tr><tr><td>Team A</td><td>Kamal, Shashi</td></tr><tr><td>Team B</td><td>Ravi</td></tr></table><p>All the best!</p>';
     expect(htmlBlocks(html)).toEqual([

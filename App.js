@@ -8,6 +8,7 @@ import RootNavigator from "./src/navigation/RootNavigator";
 import SessionBridge from "./src/components/SessionBridge";
 import SplashScreen from "./src/components/SplashScreen";
 import ToastHost from "./src/components/ui/Toast";
+import OfflineBanner from "./src/components/OfflineBanner";
 
 export default function App() {
   const status = useAuthStore((state) => state.status);
@@ -36,6 +37,7 @@ export default function App() {
         {splashDone ? null : <SplashScreen ready={status !== "booting"} onDone={finishSplash} />}
         {/* Always mounted: it carries the login cookies, so sessions restore on iOS too. */}
         <SessionBridge />
+        {status === "signedIn" ? <OfflineBanner /> : null}
         <ToastHost />
       </QueryClientProvider>
     </SafeAreaProvider>

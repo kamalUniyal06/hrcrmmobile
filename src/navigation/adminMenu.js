@@ -77,7 +77,7 @@ export function mobileTarget(path, item = {}) {
 const TARGET_ICONS = {
   Home: "home-outline",
   Attendance: "calendar-outline",
-  Approvals: "checkmark-done-circle-outline",
+  Approvals: "document-text-outline",
   Candidates: "person-add-outline",
   Shortlisted: "star-outline",
   People: "people-outline",
@@ -89,7 +89,7 @@ const TARGET_ICONS = {
   JobPostings: "briefcase-outline",
   IncrementRequests: "trending-up-outline",
   Increment: "trending-up-outline",
-  MyLeave: "sunny-outline",
+  MyLeave: "document-text-outline",
   Account: "person-circle-outline",
   EntityList: "albums-outline",
 };
@@ -128,7 +128,8 @@ export function buildMenuGroups(raw = []) {
           const target = path && !MERGED_INTO_CANDIDATES.test(path) ? mobileTarget(path, item) : null;
           return {
             id: String(item.id ?? item.name),
-            name: clean(item.name) || "Untitled",
+            // The CRM calls this page "System alerts"; the menu shows the shorter "Alerts".
+            name: target?.screen === "SystemAlerts" ? "Alerts" : clean(item.name) || "Untitled",
             target,
             icon: iconFor(item, target),
             countKey: ["1", "true"].includes(String(item.show_count).toLowerCase()) && item.key ? item.key : null,
@@ -174,7 +175,7 @@ export const FALLBACK_GROUPS = [
     id: "workspace",
     title: "Workspace",
     items: [
-      { id: "alerts", name: "System alerts", target: { screen: "SystemAlerts" } },
+      { id: "alerts", name: "Alerts", target: { screen: "SystemAlerts" } },
       { id: "limits", name: "Limit management", target: { screen: "LimitManagement" } },
     ],
   },

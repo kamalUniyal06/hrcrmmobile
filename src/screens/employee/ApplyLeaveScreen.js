@@ -13,6 +13,8 @@ import { calendarDateKey, eachDay, formatDate, isWeekend, todayKey } from "../..
 import { errorMessage } from "../../utils/records";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const NOTE_LIMIT = 500;
+const isPdf = (file) => file.type === "application/pdf" || /\.pdf$/i.test(file.name || "");
 
 export default function ApplyLeaveScreen({ navigation }) {
   const email = useEmail();
@@ -48,10 +50,14 @@ export default function ApplyLeaveScreen({ navigation }) {
     let file;
     try {
       // `import` mode copies the file into the app so the upload can read it later.
-      [file] = await pick({ type: [types.pdf, types.images], allowMultiSelection: false, mode: "import" });
+      [file] = await pick({ type: [types.pdf], allowMultiSelection: false, mode: "import" });
     } catch (err) {
       if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) return;
       setError(errorMessage(err, "Could not open the file picker."));
+      return;
+    }
+    if (!isPdf(file)) {
+      setError("Only PDF files can be attached.");
       return;
     }
     if (file.size && file.size > MAX_FILE_SIZE) {
@@ -59,7 +65,7 @@ export default function ApplyLeaveScreen({ navigation }) {
       return;
     }
     setError("");
-    setAttachment({ uri: file.uri, name: file.name || "attachment", mimeType: file.type || "application/octet-stream", size: file.size });
+    setAttachment({ uri: file.uri, name: file.name || "attachment", mimeType: "application/pdf", size: file.size });
   };
 
   const mutation = useMutation({
@@ -77,6 +83,7 @@ export default function ApplyLeaveScreen({ navigation }) {
     if (form.type === "Other Reason" && !form.otherReason.trim()) return setError("Please enter the reason for other leave.");
     if (!range.from || !range.to) return setError("Please select a start and end date.");
     if (holidays.isPending) return setError("Please wait while public holidays are loaded.");
+    if (holidays.isError) return setError("Public holidays could not be loaded, so leave days cannot be counted. Retry below.");
     if (proofRequired && !attachment) return setError("A supporting document is required for leave longer than 3 working days.");
     setError("");
     mutation.mutate({
@@ -101,20 +108,23 @@ export default function ApplyLeaveScreen({ navigation }) {
     <Screen>
       <View style={styles.info}>
         <Ionicons name="information-circle" size={18} color={colors.primary} style={{ flexShrink: 0 }} />
-        <Text style={styles.infoText}>Weekends and public holidays are not counted as leave days.</Text>
+        <Text style={styles.infoText}>Weekends and public holidays can't be picked and are not counted as leave days.</Text>
       </View>
 
       <Card style={styles.section}>
         <SectionHead icon="pricetag" tone="info" title="Leave type" />
         <SelectField value={form.type} onChange={(leaveType) => setForm({ ...form, type: leaveType })} options={LEAVE_TYPES} placeholder="Choose a reason" />
         {form.type === "Other Reason" ? (
-          <Field label="Reason" value={form.otherReason} onChangeText={(otherReason) => setForm({ ...form, otherReason })} placeholder="Tell HR what this leave is for" multiline />
+          <Field label="Reason" value={form.otherReason} onChangeText={(otherReason) => setForm({ ...form, otherReason: otherReason.slice(0, NOTE_LIMIT) })} placeholder="Tell HR what this leave is for" multiline hint={`${form.otherReason.length}/${NOTE_LIMIT}`} />
         ) : null}
       </Card>
 
       <Card style={styles.section}>
         <SectionHead icon="calendar" tone="success" title="Dates" right={!range.from ? <Text style={[type.small, { textAlign: "right" }]}>Tap start, then end</Text> : null} />
-        <MonthCalendar year={cursor.year} month={cursor.month} onPrev={() => move(-1)} onNext={() => move(1)} markers={markers} rangeStart={range.from} rangeEnd={range.to || range.from} onSelectDay={selectDay} minKey={todayKey()} legend={[{ label: "Public holiday", tone: "holiday" }]} />
+        <MonthCalendar year={cursor.year} month={cursor.month} onPrev={() => move(-1)} onNext={() => move(1)} markers={markers} rangeStart={range.from} rangeEnd={range.to || range.from} onSelectDay={selectDay} minKey={todayKey()} isDisabled={(day) => isWeekend(day) || holidayKeys.has(day)} legend={[{ label: "Public holiday", tone: "holiday" }]} />
+        {holidays.isError ? (
+          <Notice tone="closed" icon="alert-circle-outline" message="Public holidays could not be loaded, so leave days cannot be counted yet." action="Retry" onAction={() => holidays.refetch()} />
+        ) : null}
         {range.from ? (
           <View style={styles.rangeRow}>
             <DateBox label="From" value={formatDate(range.from, { year: false })} />
@@ -135,7 +145,7 @@ export default function ApplyLeaveScreen({ navigation }) {
       {form.type !== "Other Reason" ? (
         <Card style={styles.section}>
           <SectionHead icon="chatbubble-ellipses" tone="attention" title="Note for HR (optional)" />
-          <Field value={form.note} onChangeText={(note) => setForm({ ...form, note })} placeholder="Anything HR should know" multiline />
+          <Field value={form.note} onChangeText={(note) => setForm({ ...form, note: note.slice(0, NOTE_LIMIT) })} placeholder="Anything HR should know" multiline hint={`${form.note.length}/${NOTE_LIMIT}`} />
         </Card>
       ) : null}
 
@@ -153,7 +163,7 @@ export default function ApplyLeaveScreen({ navigation }) {
         <Pressable onPress={pickFile} style={({ pressed }) => [styles.upload, proofRequired && !attachment && styles.uploadRequired, pressed && { opacity: 0.75 }]}>
           <Ionicons name={attachment ? "swap-horizontal" : "cloud-upload-outline"} size={22} color={proofRequired && !attachment ? colors.destructive : colors.primary} />
           <Text style={[styles.uploadTitle, { textAlign: "center" }, proofRequired && !attachment && { color: colors.destructive }]}>{attachment ? "Change" : "Attach"}</Text>
-          <Text style={[type.small, { textAlign: "center" }]}>{proofRequired ? "Required for more than 3 working days." : "PDF or image, up to 10 MB."}</Text>
+          <Text style={[type.small, { textAlign: "center" }]}>{proofRequired ? "Required for more than 3 working days." : "PDF only, up to 10 MB."}</Text>
         </Pressable>
       </Card>
 

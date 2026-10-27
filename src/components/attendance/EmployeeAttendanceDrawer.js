@@ -1,12 +1,12 @@
 // Right-hand drawer with one employee's month: totals, a status filter and the calendar.
 // Web: employement/components/attendance/EmployeeAttendanceDrawer.jsx (+ AttendanceDayCell.jsx).
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, type } from "../../theme";
-import { Avatar, ErrorState, Notice } from "../ui";
+import { Avatar, ErrorState, LoadingState, Notice } from "../ui";
 import { getMyActivityRange } from "../../api/dailyActivity.api";
 import { getMyLeaves } from "../../api/leaves.api";
 import { keys, usePublicHolidays } from "../../hooks/queries";
@@ -191,10 +191,7 @@ function DrawerBody({ row, lateAfter }) {
         ) : activity.isError ? (
           <ErrorState message={activity.error?.message || "Could not load attendance."} onRetry={() => activity.refetch()} />
         ) : pending ? (
-          <View style={styles.loading}>
-            <ActivityIndicator color={colors.primary} />
-            <Text style={type.small}>Loading monthly attendance…</Text>
-          </View>
+          <LoadingState rows={4} variant="lines" label="Loading monthly attendance" style={styles.loading} />
         ) : (
           <View style={styles.calendar}>
             <View style={styles.weekRow}>
@@ -289,7 +286,7 @@ const styles = StyleSheet.create({
   filterActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   filterText: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.mutedForeground },
   dot: { flexShrink: 0, width: 8, height: 8, borderRadius: 4 },
-  loading: { alignItems: "center", gap: 8, padding: 40 },
+  loading: { paddingVertical: 24, paddingHorizontal: 4 },
   calendar: { borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, overflow: "hidden" },
   weekRow: { flexDirection: "row", backgroundColor: colors.muted, borderBottomWidth: 1, borderBottomColor: colors.border },
   weekday: { flex: 1, textAlign: "center", paddingVertical: 8, fontSize: 11, lineHeight: 15, fontWeight: "600", color: colors.mutedForeground },

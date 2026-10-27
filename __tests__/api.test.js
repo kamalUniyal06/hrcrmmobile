@@ -11,9 +11,10 @@ jest.mock('../src/services/api', () => ({
 
 import { apiRequest, fetchGpc, gateway } from '../src/services/api';
 import { useAuthStore } from '../src/store/authStore';
-import { applyForLeave, getMyLeaves, leaveBalancesOf, leaveStatusOf, updateLeaveStatus } from '../src/api/leaves.api';
+import { applyForLeave, getLeaveHistory, getMyLeaves, leaveBalancesOf, leaveStatusOf, updateLeaveStatus } from '../src/api/leaves.api';
 import { getDailyActivity, markActivity } from '../src/api/dailyActivity.api';
-import { createSystemAlertResponse, fetchPendingSystemAlerts } from '../src/api/systemAlerts.api';
+import { createSystemAlert, fetchMyAlerts, respondToAlert, updateSystemAlert } from '../src/api/systemAlerts.api';
+import { emptyAlertForm } from '../src/utils/systemAlerts';
 import { fetchAttendanceLimits } from '../src/api/limits.api';
 import { createIncrement, getPendingIncrement } from '../src/api/increment.api';
 import { applicationStage, applyToJob, candidateInterviewStatus, fetchMyInterviews, findCandidate, hiringProgress, needsProfile, salaryRange } from '../src/api/candidate.api';
@@ -31,6 +32,7 @@ beforeEach(() => {
 });
 
 describe('leaves', () => {
+test('leave history reads the employee ledger from hrc_leave_transaction', async () => {    gateway.mockResolvedValue(ok([{ id: 't1', leave_action: 'debit' }], { dropdown_lists: { leave_action: { debit: 'Debit' } } }));    const history = await getLeaveHistory({ employeeId: 'emp-1' });    expect(gateway.mock.calls[0][0]).toMatchObject({ action: 'fetch', module: 'hrc_leave_transaction', filters: { employee_id: 'emp-1' } });    expect(history.records.map((r) => r.id)).toEqual(['t1']);    expect(history.dropdowns.leave_action.debit).toBe('Debit');  });
   test('applyForLeave posts multipart to the hrc entry point with the web field names', async () => {
     fetchGpc.mockResolvedValue({ success: true });
     await applyForLeave({ leave_type: 'Short leave', leave_from: '2026-10-22', leave_to: '2026-10-22', leave_days: 1, description: 'Bank', attachment: { uri: 'file:///a.pdf', name: 'a.pdf', mimeType: 'application/pdf' } });
@@ -91,15 +93,41 @@ describe('daily activity', () => {
 });
 
 describe('system alerts', () => {
-  test('pending alerts exclude the ones this employee answered', async () => {
-    gateway.mockImplementation(async (body) => {
-      if (body.module === 'hrc_system_alert') return ok([{ id: 'a1', name: 'A' }, { id: 'a2', name: 'B' }]);
-      if (body.module === 'hrc_employee_response') return ok([{ id: 'r1', alert_id: 'a1', employee_id: 'emp-1', description: 'yes' }]);
-      return ok([]);
+  test('my alerts come from hrc my_alerts with the allowed answers of each type', async () => {
+    fetchGpc.mockResolvedValue({ success: true, alerts: [{ id: 'a1', response_type: 'acknowledge' }, { id: 'a2', response_type: 'yes_no', answer: 'yes' }, { id: 'a3', expires_on: '2000-01-01 00:00:00' }] });
+    const mine = await fetchMyAlerts();
+    expect(fetchGpc.mock.calls[0][0]).toMatchObject({ method: 'POST', params: { type: 'my_alerts' } });
+    expect(mine.alerts.map((a) => [a.id, a.allowed_answers, a.responded])).toEqual([['a1', ['acknowledged'], false], ['a2', ['yes', 'no'], true]]);
+    expect(mine.pendingCount).toBe(1);
+  });
+
+  test('answers go to alert_respond and must be allowed for the alert', async () => {
+    fetchGpc.mockResolvedValue({ success: true });
+    const alert = { id: 'a1', allowed_answers: ['acknowledged'] };
+    await respondToAlert({ alert, answer: 'Acknowledged' });
+    expect(fetchGpc.mock.calls[0][0]).toMatchObject({ params: { type: 'alert_respond' }, body: { alert_id: 'a1', answer: 'acknowledged' } });
+    await expect(respondToAlert({ alert, answer: 'yes' })).rejects.toThrow();
+  });
+
+  test('an alert for selected employees is created inactive, linked, then switched on', async () => {
+    gateway.mockResolvedValue({ success: true, id: 'new-1' });
+    await createSystemAlert({ ...emptyAlertForm(), name: 'Town hall', message: 'Be there', audience: 'selected', employeeIds: ['e1', 'e2'], responseType: 'acknowledge' });
+    const bodies = gateway.mock.calls.map((call) => call[0]);
+    expect(bodies[0]).toEqual({
+      action: 'create',
+      module: 'hrc_system_alert',
+      data: { name: 'Town hall', description: '<p>Be there</p>', audience: 'selected', response_type: 'acknowledge', active: 0, expires_on: '' },
     });
-    const pending = await fetchPendingSystemAlerts('emp-1');
-    expect(pending.map((a) => a.id)).toEqual(['a2']);
-    await expect(createSystemAlertResponse({ email: 'e', employeeId: 'emp-1', alertId: 'a2', answer: 'maybe' })).rejects.toThrow();
+    expect(bodies.slice(1, 3).map((b) => [b.action, b.related_module, b.related_id])).toEqual([['add_relationship', 'hrc_employees', 'e1'], ['add_relationship', 'hrc_employees', 'e2']]);
+    expect(bodies[3]).toEqual({ action: 'update', module: 'hrc_system_alert', id: 'new-1', data: { active: 1 } });
+  });
+
+  test('editing a targeted alert adds and removes only the changed links', async () => {
+    gateway.mockResolvedValue({ success: true });
+    await updateSystemAlert({ id: 'a1', currentTargetIds: ['e1', 'e2'], values: { ...emptyAlertForm(), name: 'T', message: 'M', audience: 'selected', employeeIds: ['e2', 'e3'] } });
+    const bodies = gateway.mock.calls.map((call) => call[0]);
+    expect(bodies.slice(0, 2).map((b) => [b.action, b.related_id])).toEqual([['add_relationship', 'e3'], ['remove_relationship', 'e1']]);
+    expect(bodies[2]).toMatchObject({ action: 'update', id: 'a1', data: { audience: 'selected', active: 1 } });
   });
 });
 

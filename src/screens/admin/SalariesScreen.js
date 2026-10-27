@@ -73,9 +73,9 @@ export function SalariesScreen({ navigation }) {
       <PageHeader icon="wallet-outline" tone="progress" eyebrow="People workspace" title="Salary management" subtitle="Review employee salaries, paid amounts and monthly attendance details." />
 
       <View style={styles.stats}>
-        <StatTile label="Salary records" value={statValue(filtered.length.toLocaleString())} hint="Current filtered records" icon="wallet-outline" />
-        <StatTile label="Total offered salary" value={statValue(total("offered_salary"))} hint="Current filtered records" icon="cash-outline" style={styles.wideTile} />
-        <StatTile label="Total paid amount" value={statValue(total("paid_amount"))} hint="Current filtered records" icon="checkmark-done-outline" tone="success" style={styles.wideTile} />
+        <StatTile label="Salary records" loading={query.isPending} value={statValue(filtered.length.toLocaleString())} hint="Current filtered records" icon="wallet-outline" />
+        <StatTile label="Total offered salary" loading={query.isPending} value={statValue(total("offered_salary"))} hint="Current filtered records" icon="cash-outline" style={styles.wideTile} />
+        <StatTile label="Total paid amount" loading={query.isPending} value={statValue(total("paid_amount"))} hint="Current filtered records" icon="checkmark-done-outline" tone="success" style={styles.wideTile} />
       </View>
 
       <View style={{ gap: spacing.sm }}>

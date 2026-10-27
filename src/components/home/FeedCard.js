@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, tones } from "../../theme";
-import { Avatar, Card, Chip, SegmentedControl } from "../ui";
+import { Avatar, Card, Chip, SegmentedControl, SkeletonRows } from "../ui";
 import { feedDayLabel } from "../../utils/homeDashboard";
 import { CardHead, EmptyLine, InlineError, homeStyles } from "./HomeCardParts";
 
@@ -109,7 +109,7 @@ function ActivityLog({ feed, loading, error, onRetry, today, onOpen }) {
   const [expanded, setExpanded] = useState(false);
   const items = expanded ? feed : feed.slice(0, PREVIEW);
 
-  if (loading) return <EmptyLine>Loading the activity log…</EmptyLine>;
+  if (loading) return <SkeletonRows count={3} label="Loading the activity log" />;
   if (error) return <InlineError message="Couldn't load the activity log." onRetry={onRetry} />;
   if (feed.length === 0) return <EmptyLine>No activity yet today.</EmptyLine>;
   return (

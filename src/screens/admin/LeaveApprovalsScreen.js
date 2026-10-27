@@ -5,13 +5,14 @@ import { Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, type } from "../../theme";
-import { Button, Card, Chip, EmptyState, ErrorState, Field, KeyValue, ListRow, LoadingState, Notice, PageHeader, Row, Screen, SearchField, SegmentedControl, SelectField, Sheet, StatTile } from "../../components/ui";
+import { Button, Card, Chip, EmptyState, ErrorState, Field, KeyValue, ListRow, LoadingState, Notice, PageHeader, Row, Screen, SearchField, SegmentedControl, SelectField, Sheet, SkeletonRows, StatTile } from "../../components/ui";
+import DateField from "../../components/ui/DateField";
 import { getAllLeaves, getLeave, getLeaveDocuments, leaveApproval, leaveStatusOf, updateLeaveStatus } from "../../api/leaves.api";
-import { isExEmployee } from "../../api/admin.api";
 import { useEmployeesDirectory, useUserId } from "../../hooks/queries";
 import { toast } from "../../store/toastStore";
-import { formatDate, monthLabel, timeAgo } from "../../utils/dates";
+import { formatDate, monthLabel, timeAgo, todayKey } from "../../utils/dates";
 import { clean, errorMessage, fullName, lower, plainText } from "../../utils/records";
+import { employeeOptions } from "../../utils/systemAlerts";
 
 // Same key prefix as the web (ADMIN_LEAVE_QUERY_KEY), so a decision refreshes every leave list.
 const ADMIN_LEAVE_KEY = ["leaves", "admin-feed"];
@@ -38,13 +39,13 @@ const monthBounds = (cursor) => {
 };
 const thisMonth = () => ({ year: new Date().getFullYear(), month: new Date().getMonth() });
 
-/** Active employees as { id, name, email }, sorted by name (web systemAlertUtils.employeeOptions). */
-function employeeOptions(employees = []) {
-  return employees
-    .filter((employee) => clean(employee.id) && !isExEmployee(employee))
-    .map((employee) => ({ id: clean(employee.id), name: fullName(employee, "Unnamed employee"), email: lower(employee.email1 || employee.email) }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
+// Custom range (web DateRangeFilter): a from/to date and time, sent as "YYYY-MM-DD HH:mm:ss".
+const TIME_OPTIONS = [
+  ...Array.from({ length: 48 }, (_, index) => `${pad(Math.floor(index / 2))}:${index % 2 ? "30" : "00"}`),
+  "23:59",
+].map((value) => ({ label: value, value }));
+const customBounds = (custom) => ({ from: `${custom.fromDate} ${custom.fromTime}:00`, to: `${custom.toDate} ${custom.toTime}:59` });
+const rangeLabel = (custom) => `${formatDate(custom.fromDate, { year: false })}, ${custom.fromTime} → ${formatDate(custom.toDate, { year: false })}, ${custom.toTime}`;
 
 export function useLeaveEmployee() {
   const employees = useEmployeesDirectory();
@@ -66,6 +67,9 @@ export function LeaveApprovalsScreen({ navigation }) {
   const employees = useEmployeesDirectory();
   const employeeFor = useLeaveEmployee();
   const [cursor, setCursor] = useState(thisMonth);
+  // null = the month above; otherwise { fromDate, fromTime, toDate, toTime }.
+  const [custom, setCustom] = useState(null);
+  const [pickingRange, setPickingRange] = useState(false);
   const [dateMode, setDateMode] = useState("applied");
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -79,7 +83,7 @@ export function LeaveApprovalsScreen({ navigation }) {
   }, [employees.data, term]);
   const hasEmployeeMatch = !term || Boolean(searchedEmail);
 
-  const range = monthBounds(cursor);
+  const range = custom ? customBounds(custom) : monthBounds(cursor);
   const leaveRequest = { from: range.from, to: range.to, dateField: DATE_FIELDS[dateMode], email: searchedEmail || undefined };
   const leaves = useQuery({
     queryKey: [...ADMIN_LEAVE_KEY, leaveRequest],
@@ -127,8 +131,9 @@ export function LeaveApprovalsScreen({ navigation }) {
         icon="checkmark-done-circle"
         tone="progress"
         title="Leave approvals"
-        subtitle="Pending requests are always listed. Approved and rejected ones follow the month below."
+        subtitle="Pending requests are always listed. Approved and rejected ones follow the dates below."
       />
+      <Button title="My leave & apply" icon="sunny-outline" variant="secondary" small onPress={() => navigation.navigate("MyLeave")} style={styles.myLeave} />
 
       <View style={styles.tiles}>
         {SUMMARY.map(([status, label, icon, tone]) => (
@@ -137,6 +142,7 @@ export function LeaveApprovalsScreen({ navigation }) {
             label={label}
             icon={icon}
             tone={tone}
+            loading={loading}
             value={loading ? "—" : counts[status]}
             onPress={() => setStatusFilter(status)}
             style={[styles.tile, statusFilter === status && styles.tileActive]}
@@ -147,6 +153,18 @@ export function LeaveApprovalsScreen({ navigation }) {
       <SearchField value={search} onChangeText={setSearch} placeholder="Search employee name or email" />
 
       <Card style={{ gap: 12 }}>
+        {custom ? (
+          <View style={styles.monthBar}>
+            <View style={[styles.monthLabel, { alignItems: "flex-start" }]}>
+              <Text style={styles.filterLabel}>Custom range</Text>
+              <Text style={styles.monthTitle} numberOfLines={2}>{rangeLabel(custom)}</Text>
+            </View>
+            <View style={{ flexShrink: 0, gap: 6 }}>
+              <Button title="Change" variant="outline" small onPress={() => setPickingRange(true)} />
+              <Button title="Reset" variant="ghost" small icon="refresh" onPress={() => setCustom(null)} />
+            </View>
+          </View>
+        ) : (
         <View style={styles.monthBar}>
           <Pressable onPress={() => moveMonth(-1)} hitSlop={8} accessibilityLabel="Previous month" style={styles.monthButton}>
             <Ionicons name="chevron-back" size={16} color={colors.foreground} />
@@ -166,6 +184,8 @@ export function LeaveApprovalsScreen({ navigation }) {
             <Ionicons name="chevron-forward" size={16} color={colors.foreground} />
           </Pressable>
         </View>
+        )}
+        {!custom ? <Button title="Custom date & time range" icon="options-outline" variant="ghost" small onPress={() => setPickingRange(true)} /> : null}
         <View style={{ gap: 6 }}>
           <Text style={styles.filterLabel}>Filter decided requests by</Text>
           <SegmentedControl options={DATE_MODES} value={dateMode} onChange={setDateMode} />
@@ -200,7 +220,48 @@ export function LeaveApprovalsScreen({ navigation }) {
           })}
         </View>
       )}
+
+      <RangeSheet
+        key={pickingRange ? "open" : "closed"}
+        visible={pickingRange}
+        initial={custom || { fromDate: range.from.slice(0, 10), fromTime: "00:00", toDate: range.to.slice(0, 10), toTime: "23:59" }}
+        onClose={() => setPickingRange(false)}
+        onApply={(next) => {
+          setCustom(next);
+          setPickingRange(false);
+        }}
+      />
     </Screen>
+  );
+}
+
+/** Web DateRangeFilter "Is between": from and to, each a date and a time. */
+function RangeSheet({ visible, initial, onClose, onApply }) {
+  const [value, setValue] = useState(initial);
+  const set = (patch) => setValue((current) => ({ ...current, ...patch }));
+  const invalid = !value.fromDate || !value.toDate || `${value.fromDate} ${value.fromTime}` > `${value.toDate} ${value.toTime}`;
+  return (
+    <Sheet visible={visible} onClose={onClose} title="Custom range">
+      <View style={styles.sheetBody}>
+        <Row style={{ flexWrap: "wrap", rowGap: 8 }}>
+          <Button title="Today" variant="outline" small onPress={() => set({ fromDate: todayKey(), fromTime: "00:00", toDate: todayKey(), toTime: "23:59" })} />
+          <Button title="This month" variant="outline" small onPress={() => { const month = monthBounds(thisMonth()); set({ fromDate: month.from.slice(0, 10), fromTime: "00:00", toDate: month.to.slice(0, 10), toTime: "23:59" }); }} />
+        </Row>
+        <Row align="flex-end" style={{ gap: 8 }}>
+          <DateField label="From" value={value.fromDate} onChange={(fromDate) => set({ fromDate })} clearable={false} style={{ flex: 1.4, minWidth: 0 }} />
+          <SelectField value={value.fromTime} onChange={(fromTime) => set({ fromTime })} options={TIME_OPTIONS} style={{ flex: 1, minWidth: 0 }} />
+        </Row>
+        <Row align="flex-end" style={{ gap: 8 }}>
+          <DateField label="To" value={value.toDate} onChange={(toDate) => set({ toDate })} clearable={false} minKey={value.fromDate} style={{ flex: 1.4, minWidth: 0 }} />
+          <SelectField value={value.toTime} onChange={(toTime) => set({ toTime })} options={TIME_OPTIONS} style={{ flex: 1, minWidth: 0 }} />
+        </Row>
+        {invalid ? <Text style={[type.small, { color: colors.destructive }]}>The end must be after the start.</Text> : null}
+        <Row style={{ flexWrap: "wrap", rowGap: 8 }}>
+          <Button title="Cancel" variant="outline" style={{ flexGrow: 1, flexBasis: 120 }} onPress={onClose} />
+          <Button title="Apply filter" icon="checkmark" disabled={invalid} style={{ flexGrow: 1, flexBasis: 140 }} onPress={() => onApply(value)} />
+        </Row>
+      </View>
+    </Sheet>
   );
 }
 
@@ -250,7 +311,7 @@ export function LeaveDetailScreen({ route, navigation }) {
         <Row align="flex-start">
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[type.heading, { color: colors.navy }]}>{name}</Text>
-            {clean(record.name) && clean(record.name) !== name ? <Text style={type.small} numberOfLines={1}>{record.name}</Text> : null}
+            {clean(employee?.email1 || record.name) && clean(employee?.email1 || record.name) !== name ? <Text style={type.small} numberOfLines={1} selectable>{employee?.email1 || record.name}</Text> : null}
           </View>
           <Chip label={STATUS_LABEL[status]} tone={STATUS_TONE[status]} style={{ alignSelf: "flex-start" }} />
         </Row>
@@ -282,7 +343,7 @@ export function LeaveDetailScreen({ route, navigation }) {
       <Card>
         <Text style={type.subheading}>Supporting documents</Text>
         {documents.isPending ? (
-          <Text style={type.small}>Loading…</Text>
+          <SkeletonRows count={1} avatar={false} label="Loading documents" />
         ) : (documents.data || []).length === 0 ? (
           <Text style={type.small}>No documents attached.</Text>
         ) : (
@@ -374,6 +435,7 @@ const styles = StyleSheet.create({
   link: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.primary },
   countLabel: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.mutedForeground },
   noShrink: { flexShrink: 0 },
+  myLeave: { alignSelf: "flex-start" },
   filterLabel: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.mutedForeground },
   sheetBody: { paddingHorizontal: 16, paddingBottom: 16, gap: 14 },
   suggestions: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: -6 },

@@ -81,6 +81,18 @@ export const getMyLeaves = async ({ employeeId, email }) => {
   return records;
 };
 
+/** The signed-in employee's leave ledger (web getLeavesHistory, module hrc_leave_transaction): records plus dropdown labels. */
+export const getLeaveHistory = async ({ employeeId }) => {
+  if (!employeeId) return { records: [], dropdowns: {} };
+  return fetchAllPages(gateway, {
+    action: "fetch",
+    module: "hrc_leave_transaction",
+    filters: { employee_id: employeeId },
+    order_by: "date_entered",
+    order_dir: "DESC",
+  });
+};
+
 /** Admin feed, optionally limited to a date range on `dateField` and to one employee's `email` (web getAllLeaves). */
 export const getAllLeaves = async ({ from, to, dateField = "leave_from", email } = {}) => {
   const { records } = await fetchAllPages(gateway, {

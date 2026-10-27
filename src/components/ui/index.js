@@ -1,9 +1,14 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Dimensions,
+  Easing,
   FlatList,
+  KeyboardAvoidingView,
   Image,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,7 +17,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, shadow, spacing, tones, type } from "../../theme";
 import { initials } from "../../utils/records";
@@ -24,8 +29,10 @@ export const ScreenChrome = createContext({ headerShown: false });
 
 export function Screen({ children, scroll = true, refreshing = false, onRefresh, padded = true, style, edges, contentStyle }) {
   const chrome = useContext(ScreenChrome);
+  const insets = useSafeAreaInsets();
   const safeEdges = edges || (chrome.headerShown ? [] : ["top"]);
-  const inner = padded ? [styles.screenContent, contentStyle] : contentStyle;
+  // The last card or button stays clear of the phone's gesture / navigation bar.
+  const inner = padded ? [styles.screenContent, { paddingBottom: spacing.xxl + insets.bottom }, contentStyle] : contentStyle;
   return (
     <SafeAreaView edges={safeEdges} style={[styles.screen, style]}>
       {scroll ? (
@@ -276,10 +283,13 @@ export function SelectField({ label, value, onChange, options, placeholder = "Se
  * children bring their own ScrollView / FlatList.
  */
 export function Sheet({ visible, onClose, title, children, scroll = true }) {
+  const insets = useSafeAreaInsets();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+      {/* Lifts the sheet above the keyboard, and keeps its last buttons clear of the phone's navigation bar. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <Pressable style={styles.sheetBackdrop} onPress={onClose} />
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, { paddingBottom: Math.max(28, insets.bottom + 16) }]}>
         <View style={styles.sheetHandle} />
         <View style={styles.sheetHeader}>
           <Text style={[type.heading, styles.grow]} numberOfLines={2}>{title}</Text>
@@ -291,6 +301,7 @@ export function Sheet({ visible, onClose, title, children, scroll = true }) {
           </ScrollView>
         ) : children}
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -384,7 +395,7 @@ export function Avatar({ name, size = 40, style }) {
  * Web home stat card, stacked for phone width: tinted icon square (and a chevron when it opens
  * something) on top, then the value, label and hint, each on its own line so nothing is cut off.
  */
-export function StatTile({ label, value, hint, tone = "progress", icon, onPress, style }) {
+export function StatTile({ label, value, hint, tone = "progress", icon, onPress, style, loading = false }) {
   const palette = tones[tone] || tones.progress;
   return (
     <Card onPress={onPress} style={[styles.statTile, style]}>
@@ -402,7 +413,11 @@ export function StatTile({ label, value, hint, tone = "progress", icon, onPress,
           ) : null}
         </View>
       ) : null}
-      <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value ?? "—"}</Text>
+      {loading ? (
+        <Skeleton width="50%" height={26} radius={8} style={{ marginVertical: 3 }} />
+      ) : (
+        <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value ?? "—"}</Text>
+      )}
       <Text style={styles.statLabel} numberOfLines={2}>{label}</Text>
       {hint ? <Text style={styles.statHint} numberOfLines={2}>{hint}</Text> : null}
     </Card>
@@ -421,11 +436,113 @@ export function KeyValue({ label, value, last = false }) {
 
 /* ── States ─────────────────────────────────────────────────────────────── */
 
-export function LoadingState({ label = "Loading…", style }) {
+/* Shimmer: grey placeholder shapes with a soft light band sweeping across. Every placeholder
+   shares one looping animation (started by the first, stopped by the last), so they move in
+   step and cost a single native-driven timer. */
+const shimmerProgress = new Animated.Value(0);
+let shimmerUsers = 0;
+let shimmerLoop = null;
+const SHIMMER_BAND = 90;
+
+function useShimmer() {
+  useEffect(() => {
+    shimmerUsers += 1;
+    if (!shimmerLoop) {
+      shimmerProgress.setValue(0);
+      shimmerLoop = Animated.loop(
+        Animated.timing(shimmerProgress, { toValue: 1, duration: 1300, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      );
+      shimmerLoop.start();
+    }
+    return () => {
+      shimmerUsers -= 1;
+      if (!shimmerUsers && shimmerLoop) {
+        shimmerLoop.stop();
+        shimmerLoop = null;
+      }
+    };
+  }, []);
+  return shimmerProgress;
+}
+
+/** One shimmering placeholder block; `radius` rounds it (half the height for a circle). */
+export function Skeleton({ width = "100%", height = 12, radius: corner = 6, style }) {
+  const progress = useShimmer();
+  const translateX = progress.interpolate({ inputRange: [0, 1], outputRange: [-SHIMMER_BAND * 1.5, Dimensions.get("window").width] });
   return (
-    <View style={[styles.state, style]}>
-      <ActivityIndicator color={colors.primary} />
-      <Text style={type.small}>{label}</Text>
+    <View style={[styles.skeleton, { width, height, borderRadius: corner }, style]}>
+      <Animated.View style={[styles.shimmerBand, { transform: [{ translateX }, { skewX: "-18deg" }] }]} />
+    </View>
+  );
+}
+
+/** A few lines of placeholder text; the last line is shorter, like a real paragraph. */
+export function SkeletonText({ lines = 2, lastWidth = "55%", height = 11, style }) {
+  return (
+    <View style={[{ gap: 8 }, style]}>
+      {Array.from({ length: lines }, (_, index) => (
+        <Skeleton key={index} height={height} width={index === lines - 1 && lines > 1 ? lastWidth : "100%"} />
+      ))}
+    </View>
+  );
+}
+
+/** Placeholder for a list row: avatar or icon tile, a title line and a detail line. */
+export function SkeletonRow({ avatar = true, style }) {
+  return (
+    <View style={[styles.skeletonRow, style]}>
+      {avatar ? <Skeleton width={40} height={40} radius={20} /> : null}
+      <View style={{ flex: 1, minWidth: 0, gap: 8 }}>
+        <Skeleton height={13} width="62%" />
+        <Skeleton height={10} width="40%" />
+      </View>
+      <Skeleton width={54} height={20} radius={radius.pill} />
+    </View>
+  );
+}
+
+/** A short stack of placeholder rows, for loading sections inside an existing card. */
+export function SkeletonRows({ count = 2, avatar = true, label = "Loading…", style }) {
+  return (
+    <View style={style} accessibilityRole="progressbar" accessibilityLabel={label}>
+      {Array.from({ length: count }, (_, index) => <SkeletonRow key={index} avatar={avatar} style={index > 0 && styles.skeletonDivider} />)}
+    </View>
+  );
+}
+
+/** Placeholder card: a heading line and a few text lines. */
+export function SkeletonCard({ lines = 3, style }) {
+  return (
+    <View style={[styles.card, { gap: 12 }, style]}>
+      <Row gap={10}>
+        <Skeleton width={36} height={36} radius={radius.md} />
+        <View style={{ flex: 1, gap: 8 }}>
+          <Skeleton height={13} width="50%" />
+          <Skeleton height={10} width="30%" />
+        </View>
+      </Row>
+      <SkeletonText lines={lines} />
+    </View>
+  );
+}
+
+/**
+ * Loading placeholder used across the app: shimmering rows in a card (`variant="list"`, default),
+ * stacked placeholder cards (`"cards"`), or bare text lines (`"lines"`). `label` is announced
+ * to screen readers.
+ */
+export function LoadingState({ label = "Loading…", rows = 3, variant = "list", style }) {
+  return (
+    <View style={[{ gap: spacing.md }, style]} accessibilityRole="progressbar" accessibilityLabel={label}>
+      {variant === "cards" ? (
+        Array.from({ length: rows }, (_, index) => <SkeletonCard key={index} lines={2} />)
+      ) : variant === "lines" ? (
+        <SkeletonText lines={rows} />
+      ) : (
+        <View style={[styles.card, styles.skeletonList]}>
+          {Array.from({ length: rows }, (_, index) => <SkeletonRow key={index} style={index > 0 && styles.skeletonDivider} />)}
+        </View>
+      )}
     </View>
   );
 }
@@ -532,6 +649,11 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 22, lineHeight: 28, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
   keyValue: { flexDirection: "row", gap: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   state: { alignItems: "center", justifyContent: "center", gap: 8, padding: spacing.xl },
+  skeleton: { overflow: "hidden", backgroundColor: "#E7ECE5" },
+  shimmerBand: { position: "absolute", top: -20, bottom: -20, width: SHIMMER_BAND, backgroundColor: "rgba(255,255,255,0.6)" },
+  skeletonList: { paddingVertical: 4, gap: 0 },
+  skeletonRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
+  skeletonDivider: { borderTopWidth: 1, borderTopColor: colors.border },
   stateBox: { borderWidth: 1, borderStyle: "dashed", borderColor: colors.border, borderRadius: radius.lg, backgroundColor: colors.card },
   notice: { flexDirection: "row", gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, alignItems: "flex-start" },
   noticeAction: { flexShrink: 0, maxWidth: "40%" },

@@ -1,16 +1,19 @@
 import { useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, tones, type } from "../../theme";
-import { Card, Row, Screen, SegmentedControl } from "../../components/ui";
-import DateBlock from "../../components/ui/DateBlock";
+import { Card, LoadingState, Row, Screen, SegmentedControl } from "../../components/ui";
 import TodayAttendanceCard from "../../components/TodayAttendanceCard";
 import { PendingAlertsCard } from "../../components/AlertsPrompt";
-import { useAnnouncements, useAttendanceLimits, useEmail, useMyActivityRange, useMyLeaves, usePublicHolidays } from "../../hooks/queries";
+import ScheduleCard from "../../components/home/ScheduleCard";
+import FeedCard from "../../components/home/FeedCard";
+import { useAttendanceLimits, useEmail, useEmployeesDirectory, useMyActivityRange, useMyAlerts, useMyLeaves, usePublicHolidays } from "../../hooks/queries";
+import { buildFeed } from "../../utils/homeDashboard";
+import { utcToLocalStamp } from "../../utils/systemAlerts";
 import { employeeAttendanceStats, holidayMapOf, leaveDaysOf, groupActivityByDay, daySummary } from "../../utils/attendance";
-import { calendarDateKey, dateKey, formatClock, formatDate, formatHours, monthRange, todayKey } from "../../utils/dates";
-import { initials, plainText } from "../../utils/records";
+import { dateKey, formatClock, formatDate, formatHours, monthRange, todayKey } from "../../utils/dates";
+import { firstImage, initials, plainText } from "../../utils/records";
 
 const PERIODS = [{ label: "This month", value: "month" }, { label: "Last 30 days", value: "30d" }];
 
@@ -31,7 +34,16 @@ export default function EmployeeHomeScreen({ navigation }) {
   const activity = useMyActivityRange(range);
   const leaves = useMyLeaves();
   const holidays = usePublicHolidays();
-  const announcements = useAnnouncements();
+  // Web EmployeHomePage: employees read alerts only through my_alerts (aimed at them, live, not expired).
+  const myAlerts = useMyAlerts();
+  // my_alerts times are UTC; the home cards read local time.
+  const announcements = useMemo(
+    () => (myAlerts.data?.alerts || [])
+      .map((alert) => ({ ...alert, date_entered: utcToLocalStamp(alert.date_entered) }))
+      .sort((a, b) => String(b.date_entered).localeCompare(String(a.date_entered))),
+    [myAlerts.data],
+  );
+  const employees = useEmployeesDirectory();
 
   const stats = useMemo(() => {
     const leaveDays = leaveDaysOf(leaves.data || []);
@@ -47,18 +59,18 @@ export default function EmployeeHomeScreen({ navigation }) {
       .map((day) => ({ day, summary: daySummary(byDay[day], day, today, false, limits.lateAfter) }));
   }, [activity.data, limits.lateAfter, today]);
 
-  const upcoming = useMemo(() => {
-    const items = [];
-    for (const holiday of holidays.data || []) {
-      const key = calendarDateKey(holiday.holiday_date);
-      if (key && key >= today) items.push({ key, title: plainText(holiday.name) || "Public holiday", detail: "Public holiday", tone: "lime" });
-    }
-    for (const leave of leaves.data || []) {
-      const key = calendarDateKey(leave.leave_from);
-      if (key && key >= today) items.push({ key, title: plainText(leave.type_of_leave || leave.leave_type) || "Leave", detail: `${leave.status || "Applied"} · ${leave.leave_days || ""} day(s)`, tone: leave.status === "Accepted" ? "success" : leave.status === "Rejected" ? "closed" : "attention" });
-    }
-    return items.sort((a, b) => a.key.localeCompare(b.key)).slice(0, 4);
-  }, [holidays.data, leaves.data, today]);
+  const scheduleSources = useMemo(
+    () => ({ employees: employees.data || [], holidays: holidays.data || [], leaves: leaves.data || [], leaveLabel: () => "You're on leave" }),
+    [employees.data, holidays.data, leaves.data],
+  );
+  const feed = useMemo(() => buildFeed({ activity: activity.data || [], leaves: leaves.data || [], alerts: announcements }), [activity.data, announcements, leaves.data]);
+  // Feed rows open the announcement, your leave or your attendance.
+  const openFeedItem = (item) => {
+    const alert = item.alertId ? announcements.find((record) => record.id === item.alertId) : null;
+    if (alert) navigation.navigate("AnnouncementDetail", { alert });
+    else if (item.leaveId) navigation.navigate("Leave");
+    else navigation.navigate("Attendance");
+  };
 
   const refreshing = activity.isFetching || leaves.isFetching;
   const refresh = () => {
@@ -112,7 +124,7 @@ export default function EmployeeHomeScreen({ navigation }) {
         <Text style={styles.heroSubtitle}>Here's your attendance overview and what's coming up.</Text>
       </View>
 
-      <PendingAlertsCard />
+      <PendingAlertsCard onSeeAll={() => navigation.navigate("MyAlerts")} />
       <TodayAttendanceCard />
 
       <View style={styles.section}>
@@ -135,7 +147,7 @@ export default function EmployeeHomeScreen({ navigation }) {
 
       <View style={styles.section}>
         <SectionHeader title="Recent days" hint="Login, lunch and logout for your last working days." />
-        {activity.isPending ? <Text style={type.small}>Loading…</Text> : recentDays.length === 0 ? <Text style={type.small}>No attendance records in this period yet.</Text> : (
+        {activity.isPending ? <LoadingState rows={3} label="Loading recent days" /> : recentDays.length === 0 ? <Text style={type.small}>No attendance records in this period yet.</Text> : (
           <Card style={styles.listCard}>
             {recentDays.map(({ day, summary }, index) => {
               const tone = summary.status === "late" ? "closed" : summary.status === "onTime" ? "success" : "neutral";
@@ -167,27 +179,23 @@ export default function EmployeeHomeScreen({ navigation }) {
         )}
       </View>
 
-      <View style={styles.section}>
-        <SectionHeader title="Coming up" action="Leave" onAction={() => navigation.navigate("Leave")} />
-        {upcoming.length === 0 ? <Text style={type.small}>No holidays or leave scheduled.</Text> : (
-          // Swipeable row of event cards; bleeds to the screen edges like a native carousel.
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.carousel} contentContainerStyle={styles.carouselContent}>
-            {upcoming.map((item, index) => (
-              // Lime chips use dark text, so the holiday stripe takes the olive accent instead.
-              <View key={`${item.key}-${index}`} style={[styles.eventCard, { borderTopColor: item.tone === "lime" ? colors.oliveLime : (tones[item.tone] || tones.progress).fg }]}>
-                <DateBlock dateKey={item.key} tone={item.tone} />
-                <Text style={[type.subheading, { marginTop: 10 }]} numberOfLines={3}>{item.title}</Text>
-                <Text style={type.small} numberOfLines={3}>{item.detail}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        )}
-      </View>
+      {/* Web EmployeHomePage: the Upcoming card (holidays, birthdays, anniversaries, your leave, announcements) and the activity log. */}
+      <ScheduleCard
+        sources={scheduleSources}
+        loading={holidays.isPending || leaves.isPending}
+        announcements={announcements}
+        announcementsLoading={myAlerts.isPending}
+        announcementsError={myAlerts.isError}
+        onRetryAnnouncements={() => myAlerts.refetch()}
+        navigation={navigation}
+        admin={false}
+      />
+      <FeedCard feed={feed} loading={activity.isPending} error={activity.isError} onRetry={() => activity.refetch()} today={today} onOpen={openFeedItem} />
 
-      {announcements.data?.length ? (
+      {announcements.length ? (
         <View style={styles.section}>
           <SectionHeader title="Announcements" />
-          {announcements.data.slice(0, 3).map((alert) => (
+          {announcements.slice(0, 3).map((alert) => (
             <Card key={alert.id} style={styles.announcement} onPress={() => navigation.navigate("AnnouncementDetail", { alert })}>
               <View style={styles.announcementTop}>
                 <Row gap={10} style={{ flex: 1, minWidth: 0 }}>
@@ -205,7 +213,8 @@ export default function EmployeeHomeScreen({ navigation }) {
               </View>
               <Text style={styles.announcementTitle} numberOfLines={2}>{plainText(alert.name)}</Text>
               {/* Preview: line breaks collapsed so "Dear All,\n\n…" doesn't waste preview lines. */}
-              <Text style={styles.announcementPreview} numberOfLines={2}>{plainText(alert.description).replace(/\s+/g, " ")}</Text>
+              {firstImage(alert.description) ? <Image source={{ uri: firstImage(alert.description) }} style={styles.announcementImage} resizeMode="cover" accessibilityIgnoresInvertColors /> : null}
+              {plainText(alert.description) ? <Text style={styles.announcementPreview} numberOfLines={2}>{plainText(alert.description).replace(/\s+/g, " ")}</Text> : null}
               <View style={styles.announcementFooter}>
                 <View style={styles.readMorePill}>
                   <Text style={styles.readMore}>Read more</Text>
@@ -322,9 +331,6 @@ const styles = StyleSheet.create({
   timeChipValue: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.foreground },
   hoursPill: { flexShrink: 0, paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
   hoursText: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.primary },
-  carousel: { marginHorizontal: -16 },
-  carouselContent: { paddingHorizontal: 16, gap: 10 },
-  eventCard: { width: 160, padding: 14, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderTopWidth: 3 },
   announcement: { gap: 8, padding: 16 },
   announcementTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 2 },
   announcementIcon: { flexShrink: 0, width: 32, height: 32, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
@@ -333,6 +339,7 @@ const styles = StyleSheet.create({
   announcementDateText: { fontSize: 11, lineHeight: 15, fontWeight: "600", color: colors.mutedForeground },
   announcementTitle: { fontSize: 16, lineHeight: 22, fontWeight: "600", color: colors.navy, letterSpacing: -0.2 },
   announcementPreview: { fontSize: 13, lineHeight: 19, color: colors.mutedForeground },
+  announcementImage: { width: "100%", height: 150, borderRadius: radius.md, backgroundColor: colors.muted },
   announcementFooter: { flexDirection: "row", justifyContent: "flex-end", paddingTop: 10, marginTop: 2, borderTopWidth: 1, borderTopColor: colors.border },
   readMorePill: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 5, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
   readMore: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.primary },

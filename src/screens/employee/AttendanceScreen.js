@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius, tones, type } from "../../theme";
-import { Card, Chip, Screen, Row } from "../../components/ui";
+import { Card, Chip, Screen, Row, Skeleton, SkeletonText } from "../../components/ui";
 import MonthCalendar from "../../components/ui/MonthCalendar";
 import { getMyActivityRange } from "../../api/dailyActivity.api";
 import { getMyLeaves } from "../../api/leaves.api";
@@ -89,10 +89,10 @@ export default function AttendanceScreen({ route }) {
         <Text style={styles.heroTitle} numberOfLines={2}>{title}</Text>
         <Text style={styles.heroSubtitle}>{route?.params?.email ? email : "Tap a day to see check-in, lunch and check-out times."}</Text>
         <View style={styles.heroStats}>
-          <HeroStat label="On time" value={counts.present} color="#34D399" />
-          <HeroStat label="Late" value={counts.late} color="#FBBF24" />
-          <HeroStat label="Leave" value={counts.leave} color="#93C5FD" />
-          <HeroStat label="Absent" value={counts.absent} color="#FCA5A5" />
+          <HeroStat loading={activity.isPending} label="On time" value={counts.present} color="#34D399" />
+          <HeroStat loading={activity.isPending} label="Late" value={counts.late} color="#FBBF24" />
+          <HeroStat loading={activity.isPending} label="Leave" value={counts.leave} color="#93C5FD" />
+          <HeroStat loading={activity.isPending} label="Absent" value={counts.absent} color="#FCA5A5" />
         </View>
       </View>
       <Card style={styles.calendarCard}>
@@ -106,7 +106,7 @@ export default function AttendanceScreen({ route }) {
           onSelectDay={setSelected}
           legend={LEGEND}
         />
-        {activity.isPending ? <Text style={type.small}>Loading attendance…</Text> : null}
+        {activity.isPending ? <SkeletonText lines={1} lastWidth="40%" /> : null}
         {activity.error ? <Text style={[type.small, { color: "#D4183D" }]}>{activity.error.message}</Text> : null}
       </Card>
 
@@ -154,11 +154,15 @@ export default function AttendanceScreen({ route }) {
   );
 }
 
-function HeroStat({ label, value, color }) {
+function HeroStat({ label, value, color, loading }) {
   return (
     <View style={styles.heroStat}>
       <View style={[styles.heroDot, { backgroundColor: color }]} />
-      <Text style={styles.heroStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
+      {loading ? (
+        <Skeleton width="70%" height={22} radius={6} style={{ marginVertical: 2, backgroundColor: "rgba(255,255,255,0.14)" }} />
+      ) : (
+        <Text style={styles.heroStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
+      )}
       <Text style={styles.heroStatLabel} numberOfLines={2}>{label}</Text>
     </View>
   );

@@ -119,6 +119,7 @@ export function OffboardingScreen({ navigation, route }) {
             label={label}
             icon={icon}
             tone={tone}
+            loading={resignations.isPending}
             value={resignations.data ? counts[key] : "—"}
             onPress={() => setStatusFilter(key)}
             style={[styles.tile, statusFilter === key && styles.tileActive]}

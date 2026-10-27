@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors } from "../../theme";
-import { Avatar, Card, Chip } from "../ui";
+import { Avatar, Card, Chip, SkeletonRows } from "../ui";
 import { candidateName, candidateStage, hasOutcome, roundName, uniqueInterviews } from "../../api/admin.api";
 import { formatDate, interviewDate } from "../../utils/dates";
 import { candidateStageTone, friendlyDateTime, hiringSummary } from "../../utils/homeDashboard";
@@ -39,9 +39,9 @@ export default function HiringPipelineCard({ candidates, interviews, navigation 
     <Card style={{ gap: 14 }}>
       <InsightHead icon="person-add-outline" title="Hiring pipeline" subtitle="Candidates added this month" onViewAll={openAll} />
       <View style={homeStyles.counts}>
-        <MiniCount dot={colors.primary} label="New candidates" value={blank ? "—" : hiring.total} onPress={openAll} />
-        <MiniCount dot={colors.success} label="Shortlisted" value={blank ? "—" : hiring.shortlisted} onPress={() => navigation.navigate("Candidates", { view: "shortlisted" })} />
-        <MiniCount dot={colors.info} label="Upcoming interviews" value={interviews.isPending || interviews.isError ? "—" : upcoming.length} onPress={openInterviews} />
+        <MiniCount dot={colors.primary} label="New candidates" loading={loading} value={blank ? "—" : hiring.total} onPress={openAll} />
+        <MiniCount dot={colors.success} label="Shortlisted" loading={loading} value={blank ? "—" : hiring.shortlisted} onPress={() => navigation.navigate("Candidates", { view: "shortlisted" })} />
+        <MiniCount dot={colors.info} label="Upcoming interviews" loading={interviews.isPending} value={interviews.isPending || interviews.isError ? "—" : upcoming.length} onPress={openInterviews} />
       </View>
 
       {candidates.isError ? (
@@ -51,7 +51,7 @@ export default function HiringPipelineCard({ candidates, interviews, navigation 
           <View style={{ gap: 8 }}>
             <SectionLabel>By stage</SectionLabel>
             {loading ? (
-              <EmptyLine>Loading candidates…</EmptyLine>
+              <SkeletonRows label="Loading candidates" />
             ) : hiring.total === 0 ? (
               <EmptyLine>No candidates added this month yet.</EmptyLine>
             ) : (
@@ -99,7 +99,7 @@ export default function HiringPipelineCard({ candidates, interviews, navigation 
       <View style={{ gap: 4 }}>
         <SectionLabel>Next interviews</SectionLabel>
         {interviews.isPending ? (
-          <EmptyLine>Loading interviews…</EmptyLine>
+          <SkeletonRows label="Loading interviews" />
         ) : interviews.isError ? (
           <InlineError message="Interviews could not be loaded." onRetry={() => interviews.refetch()} />
         ) : upcoming.length === 0 ? (

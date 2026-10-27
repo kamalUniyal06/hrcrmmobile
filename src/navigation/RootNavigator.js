@@ -21,6 +21,12 @@ import IncrementScreen from "../screens/employee/IncrementScreen";
 import ResignationScreen from "../screens/employee/ResignationScreen";
 import AnnouncementDetailScreen from "../screens/employee/AnnouncementDetailScreen";
 import AccountScreen from "../screens/shared/AccountScreen";
+import MyProfileScreen from "../screens/shared/MyProfileScreen";
+import MyAlertsScreen from "../screens/shared/MyAlertsScreen";
+import MyApplicationsScreen from "../screens/candidate/MyApplicationsScreen";
+import CandidateRelatedEditScreen from "../screens/candidate/CandidateRelatedEditScreen";
+import CandidateResumeScreen from "../screens/candidate/CandidateResumeScreen";
+import CandidateGovernmentIdScreen from "../screens/candidate/CandidateGovernmentIdScreen";
 import CandidateHomeScreen from "../screens/candidate/CandidateHomeScreen";
 import { JobDetailScreen, JobsScreen } from "../screens/candidate/JobsScreen";
 import InterviewsScreen from "../screens/candidate/InterviewsScreen";
@@ -65,11 +71,11 @@ const AuthStack = createNativeStackNavigator();
 const ICONS = {
   Home: ["home", "home-outline"],
   Attendance: ["calendar", "calendar-outline"],
-  Leave: ["sunny", "sunny-outline"],
+  Leave: ["document-text", "document-text-outline"],
   Jobs: ["briefcase", "briefcase-outline"],
   Interviews: ["people", "people-outline"],
   Profile: ["person-circle", "person-circle-outline"],
-  Approvals: ["checkmark-done-circle", "checkmark-done-circle-outline"],
+  Approvals: ["document-text", "document-text-outline"],
   Candidates: ["person-add", "person-add-outline"],
   People: ["people", "people-outline"],
 };
@@ -94,13 +100,13 @@ function withChrome(Component, headerShown, extra) {
 // The side-menu button always sits on the left, like the admin top bar.
 const menuHeaderLeft = () => <MenuButton style={{ marginLeft: -6, marginRight: 4 }} />;
 
-// Back arrow that always lands on the admin dashboard (Home tab), wherever the page was opened from.
+// Back arrow that returns to the screen the page was opened from (the dashboard if there is none).
 const backHomeLeft = (navigation) => () => (
   <Pressable
-    onPress={() => navigation.navigate("AdminTabs", { screen: "Home" })}
+    onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate("AdminTabs", { screen: "Home" }))}
     hitSlop={10}
     accessibilityRole="button"
-    accessibilityLabel="Back to dashboard"
+    accessibilityLabel="Back"
     style={({ pressed }) => [{ width: 40, height: 40, marginLeft: -6, marginRight: 4, alignItems: "center", justifyContent: "center" }, pressed && { opacity: 0.6 }]}
   >
     <Ionicons name="arrow-back" size={24} color={colors.navy} />
@@ -108,8 +114,9 @@ const backHomeLeft = (navigation) => () => (
 );
 
 // `params` sets a screen's initial params, `getId` keeps one screen per id (e.g. per CRM module),
-// `menu` adds the side-menu button to the left of the header, and `backHome` puts a back arrow
-// there that returns to the dashboard instead.
+// `menu` marks a side-menu destination: opened from the menu (`fromMenu` param) its header shows the
+// menu button; opened from a card or button it keeps the normal back arrow. `backHome` puts a
+// custom back arrow there that returns to the previous screen.
 function stack(definitions, initialParams) {
   const screens = definitions.map((definition) => ({ ...definition, headerShown: definition.headerShown ?? true, component: withChrome(definition.component, definition.headerShown ?? true) }));
   return function StackNavigator() {
@@ -121,11 +128,11 @@ function stack(definitions, initialParams) {
             name={name}
             component={component}
             getId={getId}
-            options={({ navigation }) => ({
+            options={({ navigation, route }) => ({
               title,
               headerShown,
               ...(centerTitle ? centeredTitleOptions : null),
-              ...(menu ? { headerLeft: menuHeaderLeft } : null),
+              ...(menu && route.params?.fromMenu ? { headerLeft: menuHeaderLeft } : null),
               ...(backHome ? { headerLeft: backHomeLeft(navigation), headerBackVisible: false } : null),
             })}
             initialParams={params ?? (index === 0 ? initialParams : undefined)}
@@ -140,6 +147,7 @@ function stack(definitions, initialParams) {
 const EmployeeHomeStack = stack([
   { name: "EmployeeHome", component: EmployeeHomeScreen, headerShown: false },
   { name: "AnnouncementDetail", component: AnnouncementDetailScreen, title: "Announcement" },
+  { name: "MyAlerts", component: MyAlertsScreen, title: "My alerts" },
 ]);
 const EmployeeAttendanceStack = stack([{ name: "AttendanceCalendar", component: AttendanceScreen, headerShown: false }]);
 const EmployeeLeaveStack = stack([
@@ -149,6 +157,7 @@ const EmployeeLeaveStack = stack([
 const EmployeeProfileStack = stack(
   [
     { name: "Account", component: AccountScreen, title: "Profile Screen", centerTitle: true },
+    { name: "MyProfile", component: MyProfileScreen, title: "My profile" },
     { name: "Increment", component: IncrementScreen, title: "Increment request" },
     { name: "Resignation", component: ResignationScreen, title: "Resignation" },
   ],
@@ -172,7 +181,10 @@ function EmployeeTabs() {
 }
 
 // ── Candidate ───────────────────────────────────────────────────────────────
-const CandidateHomeStack = stack([{ name: "CandidateHome", component: CandidateHomeScreen, headerShown: false }]);
+const CandidateHomeStack = stack([
+  { name: "CandidateHome", component: CandidateHomeScreen, headerShown: false },
+  { name: "MyApplications", component: MyApplicationsScreen, title: "My applications" },
+]);
 const CandidateJobsStack = stack([
   { name: "JobList", component: JobsScreen, headerShown: false },
   { name: "JobDetail", component: JobDetailScreen, title: "Job details" },
@@ -181,6 +193,9 @@ const CandidateInterviewsStack = stack([{ name: "InterviewList", component: Inte
 const CandidateProfileStack = stack([
   { name: "CandidateProfile", component: CandidateProfileScreen, title: "Profile Screen", centerTitle: true },
   { name: "CandidateProfileEdit", component: CandidateProfileEditScreen, title: "Edit profile" },
+  { name: "CandidateRelatedEdit", component: CandidateRelatedEditScreen, title: "Edit section" },
+  { name: "CandidateResume", component: CandidateResumeScreen, title: "Upload resume" },
+  { name: "CandidateGovernmentId", component: CandidateGovernmentIdScreen, title: "Government ID" },
 ]);
 
 function CandidateTabs() {
@@ -236,7 +251,9 @@ const AdminRootStack = stack([
   { name: "EntityDetail", component: EntityDetailScreen, title: "Record" },
   { name: "EntityForm", component: EntityFormScreen, title: "Record" },
   { name: "InterviewBoard", component: InterviewBoardScreen, title: "Interviews", menu: true },
-  { name: "SystemAlerts", component: SystemAlertsScreen, title: "System alerts", menu: true },
+  { name: "SystemAlerts", component: SystemAlertsScreen, title: "Announcements", menu: true },
+  { name: "AnnouncementDetail", component: AnnouncementDetailScreen, title: "Announcement" },
+  { name: "MyAlerts", component: MyAlertsScreen, title: "My alerts" },
   { name: "IncrementRequests", component: IncrementRequestsScreen, title: "Increment management", menu: true },
   { name: "IncrementRequestDetail", component: IncrementRequestDetailScreen, title: "Increment request" },
   { name: "Offboarding", component: OffboardingScreen, title: "Offboarding", menu: true },
@@ -245,6 +262,8 @@ const AdminRootStack = stack([
   { name: "MyLeave", component: LeaveScreen, title: "My leave", menu: true },
   { name: "ApplyLeave", component: ApplyLeaveScreen, title: "Apply for leave" },
   { name: "Increment", component: IncrementScreen, title: "Increment request", menu: true },
+  { name: "Resignation", component: ResignationScreen, title: "Resignation" },
+  { name: "MyProfile", component: MyProfileScreen, title: "My profile" },
   {
     name: "Account",
     component: AccountScreen,
@@ -255,8 +274,10 @@ const AdminRootStack = stack([
     params: {
       links: [
         { icon: "calendar-outline", title: "My attendance", subtitle: "Your own calendar", screen: "MyAttendance" },
-        { icon: "sunny-outline", title: "My leave", subtitle: "Your balance and requests", screen: "MyLeave" },
+        { icon: "document-text-outline", title: "My leave", subtitle: "Your balance and requests", screen: "MyLeave" },
         { icon: "trending-up-outline", title: "My increment request", subtitle: "Ask for a salary revision", screen: "Increment" },
+        // Web Profile "Employee services": resigning is offered only to admins who are also employees.
+        { icon: "exit-outline", title: "I want to resign", subtitle: "Start approval process", screen: "Resignation", tone: "closed", employeeOnly: true },
       ],
     },
   },

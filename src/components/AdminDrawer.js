@@ -2,17 +2,20 @@
 // Swipe right from the left edge to open it, swipe left (or tap outside) to close it.
 // Web: src/components/Sidebar.jsx (mobile drawer mode) + the profile panel.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, BackHandler, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Animated, BackHandler, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
+import { CommonActions } from "@react-navigation/native";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colors, radius } from "../theme";
+import { Skeleton } from "./ui";
 import { fetchSidebar, getSidebarStats } from "../api/sidebar.api";
 import { buildMenuGroups, FALLBACK_GROUPS, isTargetActive } from "../navigation/adminMenu";
 import { focusedRoute, navigationRef } from "../navigation/navigationRef";
 import { closeDrawer, useDrawerStore } from "../store/drawerStore";
 import { selectEmail, useAuthStore } from "../store/authStore";
 import { initials } from "../utils/records";
+import { confirmLogout } from "../utils/confirmLogout";
 
 const LOGO = require("../../assets/hrcrm-icon.png");
 const HOME = { id: "home", name: "Home", icon: "home-outline", target: { tab: "Home" } };
@@ -113,15 +116,27 @@ export default function AdminDrawer() {
   const go = (target) => {
     closeDrawer();
     if (!navigationRef.isReady()) return;
-    if (target.tab) navigationRef.navigate("AdminTabs", { screen: target.tab, params: target.params });
-    else navigationRef.navigate(target.screen, target.params);
+    if (target.tab) {
+      navigationRef.navigate("AdminTabs", { screen: target.tab, params: target.params });
+      return;
+    }
+    // A menu page is a top-level destination: it opens straight above the tabs (keeping the tab
+    // the user was on) and is marked `fromMenu`, so its header shows the menu button. Pages
+    // opened from a card or button are pushed normally and get a back arrow instead.
+    const tabs = navigationRef.getRootState()?.routes?.find((route) => route.name === "AdminTabs");
+    navigationRef.dispatch(
+      CommonActions.reset({
+        index: 1,
+        routes: [tabs || { name: "AdminTabs" }, { name: target.screen, params: { ...target.params, fromMenu: true } }],
+      }),
+    );
   };
 
-  const confirmSignOut = () =>
-    Alert.alert("Log out?", "You will need to sign in with Google or Microsoft again.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Log out", style: "destructive", onPress: () => { closeDrawer(); signOut(); } },
-    ]);
+  // A confirm toast instead of a system pop-up; the menu closes first so the toast is in view.
+  const confirmSignOut = () => {
+    closeDrawer();
+    confirmLogout(signOut);
+  };
 
   const renderItem = (item) => {
     const active = isTargetActive(item.target, current.names, current.params);
@@ -141,7 +156,7 @@ export default function AdminDrawer() {
         {item.countKey ? (
           <View style={[styles.count, active && { backgroundColor: "rgba(11,19,16,0.55)" }]}>
             {counts.isPending && counts.fetchStatus !== "idle" ? (
-              <ActivityIndicator size="small" color="rgba(255,255,255,0.7)" style={{ transform: [{ scale: 0.6 }] }} />
+              <Skeleton width={16} height={10} radius={5} style={styles.skeleton} />
             ) : (
               <Text style={[styles.countText, active && { color: "#FFFFFF" }]} numberOfLines={1}>{count ?? 0}</Text>
             )}
@@ -182,7 +197,7 @@ export default function AdminDrawer() {
 
         <ScrollView style={styles.menu} contentContainerStyle={{ paddingBottom: 12 }} showsVerticalScrollIndicator={false}>
           {layout.isPending && email ? (
-            <Skeleton />
+            <MenuSkeleton />
           ) : (
             <>
               {usingFallback ? (
@@ -232,16 +247,16 @@ export default function AdminDrawer() {
   );
 }
 
-function Skeleton() {
+function MenuSkeleton() {
   return (
     <View style={{ gap: 18, paddingTop: 6 }} accessibilityLabel="Loading menu">
       {[0, 1, 2].map((group) => (
         <View key={group} style={{ gap: 10 }}>
-          <View style={[styles.skeleton, { width: 110, height: 10 }]} />
+          <Skeleton width={110} height={10} style={styles.skeleton} />
           {[0, 1, 2].map((item) => (
             <View key={item} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 10 }}>
-              <View style={[styles.skeleton, { width: 28, height: 28, borderRadius: 8 }]} />
-              <View style={[styles.skeleton, { flex: 1, height: 12 }]} />
+              <Skeleton width={28} height={28} radius={8} style={styles.skeleton} />
+              <Skeleton height={12} style={[styles.skeleton, { flex: 1, width: undefined }]} />
             </View>
           ))}
         </View>
@@ -277,7 +292,7 @@ const styles = StyleSheet.create({
   itemTextActive: { color: "#FFFFFF", fontWeight: "600" },
   count: { flexShrink: 0, minWidth: 28, maxWidth: 72, minHeight: 22, paddingHorizontal: 8, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(11,19,16,0.55)" },
   countText: { fontSize: 11, lineHeight: 15, fontWeight: "600", color: "#FFFFFF", fontVariant: ["tabular-nums"] },
-  skeleton: { height: 12, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.10)" },
+  skeleton: { backgroundColor: "rgba(255,255,255,0.10)" },
   footer: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.12)" },
   profile: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10, padding: 6, borderRadius: radius.md },
   avatar: { flexShrink: 0, width: 40, height: 40, borderRadius: radius.md, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },

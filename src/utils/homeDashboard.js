@@ -89,7 +89,7 @@ export const isAlertActive = (alert) => !["0", "false", "off", "no"].includes(lo
 const endOfDay = (year, month, day) => new Date(year, month - 1, day, 23, 59, 59);
 
 /** hrc "YYYY-MM-DD HH:MM:SS" strings are UTC. */
-function parseUtc(value) {
+export function parseUtc(value) {
   const match = clean(value).match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
   if (!match) return null;
   const [year, month, day, hour, minute, second = "0"] = match.slice(1);

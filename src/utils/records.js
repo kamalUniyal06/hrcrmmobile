@@ -122,17 +122,44 @@ function unescapeHtml(value) {
   return text;
 }
 
+const IMAGE_TAG = /<img\b[^>]*>/gi;
+
+/** The `src` of an <img> tag, when it is a web or inline (data:) image. */
+function imageSource(tag) {
+  const src = decodeEntities(tag.match(/\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i)?.slice(1).find(Boolean) || "").trim();
+  return /^(https?:|data:image\/)/i.test(src) ? src : "";
+}
+
+/** The first picture in rich text (card thumbnails), or "". */
+export function firstImage(value) {
+  for (const tag of unescapeHtml(value).match(IMAGE_TAG) || []) {
+    const uri = imageSource(tag);
+    if (uri) return uri;
+  }
+  return "";
+}
+
 /**
- * Splits rich text into readable blocks: `{ type: "text", text }` paragraphs and
- * `{ type: "table", header, rows }` tables (cells as plain text). Used where tables
- * must stay tables, e.g. team lists in announcements.
+ * Splits rich text into readable blocks: `{ type: "text", text }` paragraphs,
+ * `{ type: "image", uri }` pictures and `{ type: "table", header, rows }` tables (cells as
+ * plain text). Used where tables must stay tables and pictures must show, e.g. announcements.
  */
 export function htmlBlocks(value) {
   const html = unescapeHtml(value);
   const blocks = [];
-  const pushText = (segment) => {
+  const pushPlain = (segment) => {
     const text = plainText(segment);
     if (text) blocks.push({ type: "text", text });
+  };
+  const pushText = (segment) => {
+    let last = 0;
+    for (const match of segment.matchAll(IMAGE_TAG)) {
+      pushPlain(segment.slice(last, match.index));
+      last = match.index + match[0].length;
+      const uri = imageSource(match[0]);
+      if (uri) blocks.push({ type: "image", uri });
+    }
+    pushPlain(segment.slice(last));
   };
   const tablePattern = /<table\b[^>]*>([\s\S]*?)<\/table>/gi;
   let last = 0;
