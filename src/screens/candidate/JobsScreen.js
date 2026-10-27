@@ -149,5 +149,5 @@ const styles = StyleSheet.create({
   pillRow: { flexDirection: "row", flexWrap: "wrap", columnGap: 8, rowGap: 8 },
   pill: { flexDirection: "row", alignItems: "flex-start", gap: 4, maxWidth: "100%", alignSelf: "flex-start", paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.lg, backgroundColor: tones.neutral.bg },
   pillIcon: { flexShrink: 0, marginTop: 2 },
-  pillText: { flexShrink: 1, fontSize: 12, lineHeight: 16, fontWeight: "600", color: tones.neutral.fg },
+  pillText: { flexShrink: 1, fontSize: 12, lineHeight: 17, fontWeight: "600", color: tones.neutral.fg },
 });

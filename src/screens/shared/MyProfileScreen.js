@@ -279,7 +279,7 @@ function Meta({ icon, text }) {
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   hero: { gap: 14 },
-  eyebrow: { ...type.tiny, fontSize: 10, letterSpacing: 0.8, color: colors.primary },
-  about: { fontSize: 15, lineHeight: 23, color: colors.foreground },
+  eyebrow: { ...type.tiny, fontSize: 11, lineHeight: 15, letterSpacing: 0.8, color: colors.primary },
+  about: { fontSize: 15, lineHeight: 21, color: colors.foreground },
   footer: { gap: 8, paddingHorizontal: spacing.lg, paddingTop: 12, paddingBottom: 14, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.card, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
 });

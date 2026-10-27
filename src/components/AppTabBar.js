@@ -56,6 +56,6 @@ const styles = StyleSheet.create({
   tab: { flex: 1, minWidth: 0, alignItems: "center", gap: 3, paddingHorizontal: 2 },
   pill: { width: 56, maxWidth: "100%", height: 30, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   pillActive: { backgroundColor: colors.primarySoft },
-  label: { maxWidth: "100%", textAlign: "center", fontSize: 11, lineHeight: 14, fontWeight: "500", color: colors.mutedForeground },
+  label: { maxWidth: "100%", textAlign: "center", fontSize: 11, lineHeight: 15, fontWeight: "500", color: colors.mutedForeground },
   labelActive: { fontWeight: "600", color: colors.primaryDeep },
 });

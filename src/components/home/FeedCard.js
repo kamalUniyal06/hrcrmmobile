@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   // Timeline line behind the icon bubbles (bubble centre = 16px).
   rail: { position: "absolute", left: 15.5, top: 18, bottom: 18, width: 1, backgroundColor: colors.border },
   bubble: { flexShrink: 0, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: colors.card },
-  title: { fontSize: 14, lineHeight: 19, fontWeight: "600", color: colors.foreground },
+  title: { fontSize: 14, lineHeight: 20, fontWeight: "600", color: colors.foreground },
   when: { flexShrink: 0, maxWidth: "30%", textAlign: "right", paddingTop: 7 },
   more: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 12, backgroundColor: colors.primarySoft },
   moreText: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.primary },

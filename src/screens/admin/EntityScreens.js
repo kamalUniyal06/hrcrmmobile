@@ -278,7 +278,7 @@ function EntityCard({ record, card, dropdowns, onPress, onActions }) {
         {date || status ? (
           <Row style={{ marginTop: 4, flexWrap: "wrap" }} gap={6}>
             {status ? <Chip label={status} tone="progress" small style={styles.statusChip} /> : null}
-            {date ? <Text style={[type.small, { fontSize: 12, lineHeight: 16, flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">{date}</Text> : null}
+            {date ? <Text style={[type.small, { fontSize: 12, lineHeight: 17, flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">{date}</Text> : null}
           </Row>
         ) : null}
       </View>
@@ -886,7 +886,7 @@ const styles = StyleSheet.create({
   headText: { flex: 1, minWidth: 0, gap: 2 },
   heading: { fontSize: 24, lineHeight: 30, fontWeight: "600", letterSpacing: -0.4, color: colors.navy },
   editButton: { minHeight: 46 },
-  sectionTitle: { fontSize: 17, lineHeight: 23, fontWeight: "600", color: colors.navy },
+  sectionTitle: { fontSize: 17, lineHeight: 24, fontWeight: "600", color: colors.navy },
   footer: { paddingTop: spacing.sm },
   saveButton: { minHeight: 52, borderRadius: radius.lg, paddingHorizontal: spacing.xl },
   stackedRow: { gap: 4, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },

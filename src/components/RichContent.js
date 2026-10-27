@@ -86,14 +86,14 @@ function DataTable({ header, rows }) {
 
 const styles = StyleSheet.create({
   wrap: { gap: 16 },
-  message: { fontSize: 15, lineHeight: 24, color: colors.foreground },
+  message: { fontSize: 15, lineHeight: 21, color: colors.foreground },
   image: { width: "100%", borderRadius: radius.md, backgroundColor: colors.muted },
   imageFallback: { alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 24, borderRadius: radius.md, backgroundColor: colors.muted },
   tableScroll: { marginHorizontal: -4 },
   table: { borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
   tr: { flexDirection: "row" },
   thead: { backgroundColor: colors.navy },
-  th: { minWidth: 0, paddingVertical: 10, paddingHorizontal: 12, fontSize: 12, lineHeight: 16, fontWeight: "600", color: "#FFFFFF", textTransform: "uppercase", letterSpacing: 0.4 },
+  th: { minWidth: 0, paddingVertical: 10, paddingHorizontal: 12, fontSize: 12, lineHeight: 17, fontWeight: "600", color: "#FFFFFF", textTransform: "uppercase", letterSpacing: 0.4 },
   zebra: { backgroundColor: colors.background },
   rowLine: { borderTopWidth: 1, borderTopColor: colors.border },
   td: { minWidth: 0, paddingVertical: 10, paddingHorizontal: 12, fontSize: 14, lineHeight: 20, color: colors.foreground },

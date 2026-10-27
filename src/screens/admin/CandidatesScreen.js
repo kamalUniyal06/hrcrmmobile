@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tag: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 4, maxWidth: "100%", paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.muted },
   tagLabel: { fontSize: 11, lineHeight: 15, color: colors.mutedForeground },
-  tagValue: { flexShrink: 1, fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.foreground },
+  tagValue: { flexShrink: 1, fontSize: 12, lineHeight: 17, fontWeight: "600", color: colors.foreground },
   cardFoot: { flexDirection: "row", alignItems: "center", gap: 10, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   open: { flexShrink: 0, flexDirection: "row", alignItems: "center", gap: 2 },
   openText: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.primary },

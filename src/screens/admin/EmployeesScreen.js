@@ -318,7 +318,7 @@ export function EmployeeDetailScreen({ route, navigation }) {
           </Row>
           {entries.map(([key, label], index) => (
             <View key={key} style={[styles.detailRow, index === entries.length - 1 && { borderBottomWidth: 0 }]}>
-              <Text style={[type.small, { fontSize: 12 }]}>{label}</Text>
+              <Text style={[type.small, { fontSize: 12, lineHeight: 17 }]}>{label}</Text>
               <FieldValue field={key} value={values[key]} />
             </View>
           ))}
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
   filterButtonOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   activeFilters: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: -4 },
   filterChip: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%", paddingVertical: 6, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
-  filterChipText: { flexShrink: 1, fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.primary },
+  filterChipText: { flexShrink: 1, fontSize: 12, lineHeight: 17, fontWeight: "600", color: colors.primary },
   clearText: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.primary },
   sheetBody: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.lg },
   sheetLabel: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.foreground },

@@ -56,6 +56,6 @@ const styles = StyleSheet.create({
   eyebrow: { ...type.tiny, color: "rgba(255,255,255,0.6)", letterSpacing: 1 },
   title: { fontSize: 22, lineHeight: 29, fontWeight: "600", letterSpacing: -0.3, color: "#FFFFFF" },
   datePill: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", maxWidth: "100%", marginTop: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.12)" },
-  dateText: { flexShrink: 1, fontSize: 12, lineHeight: 16, fontWeight: "600", color: "#FFFFFF" },
+  dateText: { flexShrink: 1, fontSize: 12, lineHeight: 17, fontWeight: "600", color: "#FFFFFF" },
   body: { padding: 20 },
 });

@@ -104,7 +104,7 @@ export function ProgressBar({ percent, color = colors.primary, height = 6, style
 export const homeStyles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 6 },
   rowTitle: { ...type.subheading },
-  rowSub: { fontSize: 12, lineHeight: 16, color: colors.mutedForeground },
+  rowSub: { fontSize: 12, lineHeight: 17, color: colors.mutedForeground },
   counts: { flexDirection: "row", gap: 8 },
 });
 
@@ -115,12 +115,12 @@ const styles = StyleSheet.create({
   link: { flexDirection: "row", alignItems: "center", gap: 2, flexShrink: 0, maxWidth: "40%" },
   linkText: { flexShrink: 1, fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.primary },
   badge: { alignSelf: "flex-start", maxWidth: "100%", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill },
-  badgeText: { fontSize: 12, lineHeight: 16, fontWeight: "600" },
+  badgeText: { fontSize: 12, lineHeight: 17, fontWeight: "600" },
   iconSquare: { flexShrink: 0, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   mini: { flex: 1, minWidth: 0, gap: 6, padding: 12, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card },
   miniTop: { flexDirection: "row", alignItems: "center", gap: 6 },
   dot: { flexShrink: 0, width: 7, height: 7, borderRadius: 4 },
-  miniLabel: { flexShrink: 1, minWidth: 0, fontSize: 12, lineHeight: 16, color: colors.mutedForeground },
+  miniLabel: { flexShrink: 1, minWidth: 0, fontSize: 12, lineHeight: 17, color: colors.mutedForeground },
   miniValue: { fontSize: 20, lineHeight: 26, fontWeight: "600", color: colors.navy, fontVariant: ["tabular-nums"] },
   emptyLine: { paddingVertical: 14, paddingHorizontal: 12, borderRadius: radius.md, borderWidth: 1, borderStyle: "dashed", borderColor: colors.border },
   error: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: radius.md, backgroundColor: colors.destructiveSoft },

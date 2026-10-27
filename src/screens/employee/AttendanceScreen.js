@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   heroStats: { flexDirection: "row", flexWrap: "wrap", columnGap: 8, rowGap: 8, marginTop: 12 },
   heroStat: { flexGrow: 1, flexShrink: 1, flexBasis: 64, minWidth: 64, paddingVertical: 10, paddingHorizontal: 8, borderRadius: radius.md, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", gap: 2 },
   heroDot: { width: 8, height: 8, borderRadius: 4, marginBottom: 4 },
-  heroStatValue: { fontSize: 22, lineHeight: 28, fontWeight: "600", color: "#FFFFFF" },
+  heroStatValue: { fontSize: 22, lineHeight: 29, fontWeight: "600", color: "#FFFFFF" },
   heroStatLabel: { fontSize: 11, lineHeight: 15, fontWeight: "600", color: "rgba(255,255,255,0.8)" },
   calendarCard: { padding: 14 },
   dayCard: { gap: 12 },
@@ -202,10 +202,10 @@ const styles = StyleSheet.create({
   timeTile: { flexGrow: 1, flexShrink: 1, flexBasis: "46%", minWidth: 140, flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: radius.md },
   timeIcon: { flexShrink: 0, width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   timeLabel: { fontSize: 11, lineHeight: 15, fontWeight: "600", color: colors.mutedForeground },
-  timeValue: { fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.foreground },
+  timeValue: { fontSize: 15, lineHeight: 21, fontWeight: "600", color: colors.foreground },
   workedBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: radius.md, backgroundColor: colors.primarySoft },
-  workedLabel: { fontSize: 14, lineHeight: 19, fontWeight: "600", color: colors.primary },
-  workedValue: { flexShrink: 0, fontSize: 16, lineHeight: 22, fontWeight: "600", color: colors.navy },
+  workedLabel: { fontSize: 14, lineHeight: 20, fontWeight: "600", color: colors.primary },
+  workedValue: { flexShrink: 0, fontSize: 16, lineHeight: 23, fontWeight: "600", color: colors.navy },
   emptyDay: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: radius.md, backgroundColor: colors.background },
 });
 

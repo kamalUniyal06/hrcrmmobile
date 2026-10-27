@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   cardHead: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   headText: { flex: 1, minWidth: 0, gap: 2 },
   tile: { flexShrink: 0, width: 38, height: 38, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
-  name: { fontSize: 16, lineHeight: 22, fontWeight: "600", color: colors.navy },
+  name: { fontSize: 16, lineHeight: 23, fontWeight: "600", color: colors.navy },
   stateChip: { maxWidth: "38%", flexShrink: 0, alignSelf: "flex-start" },
   infoRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   infoText: { flex: 1, minWidth: 0 },

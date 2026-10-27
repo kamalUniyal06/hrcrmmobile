@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   cell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 2 },
   day: { flex: 1, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
   today: { borderWidth: 1.5, borderColor: colors.primary },
-  dayText: { fontSize: 13, lineHeight: 17, fontWeight: "500" },
+  dayText: { fontSize: 13, lineHeight: 18, fontWeight: "500" },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 4 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
   swatch: { flexShrink: 0, width: 12, height: 12, borderRadius: 4 },

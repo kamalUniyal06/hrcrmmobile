@@ -58,5 +58,5 @@ const styles = StyleSheet.create({
   screen: { position: "absolute", top: 0, left: 0, backgroundColor: "#FFFFFF", zIndex: 10, elevation: 10 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 14, paddingHorizontal: 16 },
   logo: { width: 100, height: 100 },
-  name: { fontSize: 21, lineHeight: 26, fontWeight: "600", letterSpacing: -0.3, color: colors.foreground },
+  name: { fontSize: 22, lineHeight: 29, fontWeight: "600", letterSpacing: -0.3, color: colors.foreground },
 });

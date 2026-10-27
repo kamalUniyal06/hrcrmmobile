@@ -416,7 +416,7 @@ export function IncrementRequestDetailScreen({ route }) {
                       {clean(reply.description) || "Empty response"}
                     </Text>
                     {reply.date_entered || clean(reply.name).includes("@") ? (
-                      <Text style={[type.small, { fontSize: 12, lineHeight: 16 }]}>
+                      <Text style={[type.small, { fontSize: 12, lineHeight: 17 }]}>
                         {[reply.date_entered ? dateText(reply.date_entered) : "", clean(reply.name).includes("@") ? reply.name : ""].filter(Boolean).join(" · ")}
                       </Text>
                     ) : null}
@@ -467,19 +467,19 @@ const styles = StyleSheet.create({
   dateField: { flexGrow: 1, minWidth: 0 },
   // Label and figure share a line when they fit, otherwise the figure wraps under the label.
   salaryLine: { flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", justifyContent: "space-between", columnGap: spacing.sm, rowGap: 2 },
-  salary: { flexShrink: 0, maxWidth: "100%", fontSize: 17, lineHeight: 22, fontWeight: "600", color: colors.navy, fontVariant: ["tabular-nums"] },
+  salary: { flexShrink: 0, maxWidth: "100%", fontSize: 17, lineHeight: 24, fontWeight: "600", color: colors.navy, fontVariant: ["tabular-nums"] },
   salaryBox: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.primarySoft },
   salaryIcon: { flexShrink: 0, width: 40, height: 40, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
-  salaryBig: { fontSize: 22, lineHeight: 28, fontWeight: "600", color: colors.navy, fontVariant: ["tabular-nums"] },
+  salaryBig: { fontSize: 22, lineHeight: 29, fontWeight: "600", color: colors.navy, fontVariant: ["tabular-nums"] },
   percent: { fontSize: 20, lineHeight: 26, fontWeight: "600", color: colors.navy, fontVariant: ["tabular-nums"] },
-  cardTitle: { fontSize: 16, lineHeight: 22, fontWeight: "600", color: colors.navy },
+  cardTitle: { fontSize: 16, lineHeight: 23, fontWeight: "600", color: colors.navy },
   count: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.mutedForeground },
   headingIcon: { flexShrink: 0, width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
   miniIcon: { flexShrink: 0, width: 20, height: 20, borderRadius: 6, backgroundColor: tones.success.bg, alignItems: "center", justifyContent: "center" },
   formActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   formAction: { flexGrow: 1, flexBasis: 140, minWidth: 0, minHeight: 50, paddingHorizontal: spacing.md, alignSelf: "stretch" },
   number: { flexShrink: 0, width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
-  numberText: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.primary, fontVariant: ["tabular-nums"] },
+  numberText: { fontSize: 12, lineHeight: 17, fontWeight: "600", color: colors.primary, fontVariant: ["tabular-nums"] },
   reply: { gap: 6, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
   unanswered: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", maxWidth: "100%", paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, borderWidth: 1, borderStyle: "dashed", borderColor: colors.border },
 });

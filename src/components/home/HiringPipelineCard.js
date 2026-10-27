@@ -126,6 +126,6 @@ const styles = StyleSheet.create({
   legend: { flexDirection: "row", flexWrap: "wrap", columnGap: 14, rowGap: 6 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
   legendDot: { flexShrink: 0, width: 8, height: 8, borderRadius: 4 },
-  legendLabel: { flexShrink: 1, fontSize: 12, lineHeight: 16, color: colors.mutedForeground },
-  legendCount: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
+  legendLabel: { flexShrink: 1, fontSize: 12, lineHeight: 17, color: colors.mutedForeground },
+  legendCount: { fontSize: 12, lineHeight: 17, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
 });

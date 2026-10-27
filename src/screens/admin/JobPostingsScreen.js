@@ -360,5 +360,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, lineHeight: 30, fontWeight: "600", letterSpacing: -0.4, color: colors.navy },
   sectionHead: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   tile: { flexShrink: 0, width: 34, height: 34, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
-  sectionTitle: { flex: 1, minWidth: 0, fontSize: 17, lineHeight: 23, fontWeight: "600", color: colors.navy },
+  sectionTitle: { flex: 1, minWidth: 0, fontSize: 17, lineHeight: 24, fontWeight: "600", color: colors.navy },
 });

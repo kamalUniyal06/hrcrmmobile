@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
   bar: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingBottom: 8, backgroundColor: colors.background, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   brand: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 8 },
   logo: { flexShrink: 0, width: 32, height: 32, borderRadius: radius.sm },
-  brandText: { fontSize: 21, lineHeight: 27, fontWeight: "600", letterSpacing: -0.3, color: colors.navy, flexShrink: 1 },
+  brandText: { fontSize: 22, lineHeight: 29, fontWeight: "600", letterSpacing: -0.3, color: colors.navy, flexShrink: 1 },
   profile: { flexShrink: 0, width: 36, height: 36, borderRadius: 18, marginRight: 4, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft, borderWidth: 2, borderColor: colors.primary },
-  profileText: { fontSize: 13, lineHeight: 17, fontWeight: "600", color: colors.primary },
+  profileText: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.primary },
 });

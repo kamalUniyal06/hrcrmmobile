@@ -75,5 +75,5 @@ const styles = StyleSheet.create({
   line: { width: 2, flex: 1, minHeight: 12, marginVertical: 4, backgroundColor: colors.border },
   timelineBody: { flex: 1, minWidth: 0, paddingTop: 3, gap: 2 },
   dot: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  dotText: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.mutedForeground },
+  dotText: { fontSize: 12, lineHeight: 17, fontWeight: "600", color: colors.mutedForeground },
 });

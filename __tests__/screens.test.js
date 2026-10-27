@@ -156,8 +156,8 @@ describe('employee screens', () => {
     const { tree } = mount(<EmployeeHomeScreen navigation={navigation} />);
     await settle();
     const text = textOf(tree);
-    expect(text).toContain('Working session');
-    expect(text).toContain('Checked in');
+    expect(text).toContain('Shift time');
+    expect(text).toContain('Present');
     expect(text).toContain('Town hall');
     expect(gateway).toHaveBeenCalledWith(expect.objectContaining({ module: 'hrc_daily_activity' }));
   });

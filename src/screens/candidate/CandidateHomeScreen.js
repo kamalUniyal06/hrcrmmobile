@@ -117,6 +117,6 @@ const styles = StyleSheet.create({
   chip: { flexShrink: 0, maxWidth: "45%" },
   step: { flex: 1, minWidth: 0, alignItems: "center", gap: 6 },
   dot: { flexShrink: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
-  dotText: { color: "#fff", fontSize: 12, lineHeight: 16, fontWeight: "600" },
+  dotText: { color: "#fff", fontSize: 12, lineHeight: 17, fontWeight: "600" },
   stepLabel: { alignSelf: "stretch", color: "#fff", fontSize: 11, lineHeight: 15, textAlign: "center", fontWeight: "500" },
 });

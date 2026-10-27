@@ -102,13 +102,13 @@ export function LunchInOut({ sessions, limit }) {
 const styles = StyleSheet.create({
   pill: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", maxWidth: "100%", flexShrink: 1, borderLeftWidth: 3, borderRadius: radius.sm, paddingVertical: 6, paddingHorizontal: 10 },
   pillSmall: { paddingVertical: 4, paddingHorizontal: 8 },
-  pillText: { fontSize: 12, lineHeight: 16, fontWeight: "600", flexShrink: 1, minWidth: 0 },
+  pillText: { fontSize: 12, lineHeight: 17, fontWeight: "600", flexShrink: 1, minWidth: 0 },
   dot: { flexShrink: 0, width: 8, height: 8, borderRadius: 4 },
   tag: { alignSelf: "flex-start", maxWidth: "100%", borderRadius: radius.pill, paddingVertical: 2, paddingHorizontal: 8 },
-  tagText: { fontSize: 10, lineHeight: 14, fontWeight: "600" },
+  tagText: { fontSize: 11, lineHeight: 15, fontWeight: "600" },
   legend: { flexDirection: "row", flexWrap: "wrap", columnGap: 12, rowGap: 6 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
-  legendText: { flexShrink: 1, fontSize: 12, lineHeight: 16, color: colors.mutedForeground },
+  legendText: { flexShrink: 1, fontSize: 12, lineHeight: 17, color: colors.mutedForeground },
   // Wraps the end time onto a second line instead of overflowing the card when the row is narrow.
   span: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 6, rowGap: 2, flexShrink: 1, minWidth: 0 },
   spanMiddle: { flexDirection: "row", alignItems: "center", flexShrink: 1, minWidth: 0 },

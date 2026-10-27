@@ -194,8 +194,8 @@ export default function AuthWebView({ provider, visible, loginHint, onClose, onS
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#FFFFFF" },
   header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
-  title: { fontSize: 22, fontWeight: "600", letterSpacing: -0.4, color: colors.foreground },
-  subtitle: { fontSize: 13, color: colors.mutedForeground, marginTop: 2 },
+  title: { fontSize: 22, lineHeight: 29, fontWeight: "600", letterSpacing: -0.4, color: colors.foreground },
+  subtitle: { fontSize: 13, lineHeight: 18, color: colors.mutedForeground, marginTop: 2 },
   center: { flex: 1, paddingHorizontal: 14, paddingTop: 14, paddingBottom: 14 },
   card: { flex: 1, width: "100%", maxWidth: 560, alignSelf: "center", backgroundColor: colors.card, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, overflow: "hidden", ...shadow.card, elevation: 6 },
   close: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: colors.muted },

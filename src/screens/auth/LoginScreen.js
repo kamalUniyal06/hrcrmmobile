@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   heroGlow: { position: "absolute", width: 260, height: 260, borderRadius: 130, right: -90, top: -110, backgroundColor: "rgba(212,250,60,0.16)" },
   logoTile: { flexShrink: 0, width: 62, height: 62, borderRadius: 17, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   logo: { width: 46, height: 46 },
-  brand: { color: "#fff", fontSize: 28, lineHeight: 34, fontWeight: "600", letterSpacing: -0.5 },
+  brand: { color: "#fff", fontSize: 28, lineHeight: 35, fontWeight: "600", letterSpacing: -0.5 },
   tagline: { color: "#93C5FD", fontSize: 14, lineHeight: 20, textAlign: "center" },
   panel: { marginTop: -24, marginHorizontal: 16, backgroundColor: colors.card, borderRadius: radius.xl, paddingHorizontal: 22, paddingTop: 28, paddingBottom: 26, gap: 22, borderWidth: 1, borderColor: colors.border, ...shadow.card, elevation: 4 },
   buttons: { gap: 12 },

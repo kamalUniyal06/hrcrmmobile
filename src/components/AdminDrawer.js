@@ -238,7 +238,7 @@ export default function AdminDrawer() {
               <Text style={styles.profileRole} numberOfLines={1} ellipsizeMode="middle">{email || "Admin"}</Text>
             </View>
           </Pressable>
-          <Pressable onPress={confirmSignOut} hitSlop={6} accessibilityLabel="Log out" style={({ pressed }) => [styles.logout, pressed && { opacity: 0.7 }]}>
+          <Pressable onPress={confirmSignOut} hitSlop={6} accessibilityLabel="Sign out" style={({ pressed }) => [styles.logout, pressed && { opacity: 0.7 }]}>
             <Ionicons name="log-out-outline" size={18} color="#FCA5A5" />
           </Pressable>
         </View>
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   brand: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 52, paddingHorizontal: 12, borderRadius: radius.lg, backgroundColor: "#FFFFFF" },
   brandMain: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   logo: { flexShrink: 0, width: 32, height: 32, borderRadius: 8 },
-  brandName: { fontSize: 19, lineHeight: 24, fontWeight: "600", color: colors.primary, letterSpacing: -0.2 },
+  brandName: { fontSize: 20, lineHeight: 26, fontWeight: "600", color: colors.primary, letterSpacing: -0.2 },
   close: { flexShrink: 0, width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: colors.muted },
   homeWrap: { marginTop: 16, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.12)" },
   menu: { flex: 1, marginTop: 8 },
@@ -281,14 +281,14 @@ const styles = StyleSheet.create({
   group: { marginBottom: 6 },
   groupHeader: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingTop: 14, paddingBottom: 8 },
   groupAccent: { flexShrink: 0, width: 3, height: 14, borderRadius: 2, backgroundColor: colors.lime },
-  groupTitle: { flex: 1, minWidth: 0, fontSize: 12, lineHeight: 16, fontWeight: "600", letterSpacing: 0.8, textTransform: "uppercase", color: "rgba(255,255,255,0.9)" },
+  groupTitle: { flex: 1, minWidth: 0, fontSize: 12, lineHeight: 17, fontWeight: "600", letterSpacing: 0.8, textTransform: "uppercase", color: "rgba(255,255,255,0.9)" },
   noShrink: { flexShrink: 0 },
   item: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 46, paddingHorizontal: 8, paddingVertical: 5, borderRadius: radius.md },
   itemActive: { backgroundColor: "rgba(255,255,255,0.22)" },
   itemPressed: { backgroundColor: "rgba(255,255,255,0.08)" },
   itemIcon: { flexShrink: 0, width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" },
   itemIconActive: { backgroundColor: "rgba(11,19,16,0.55)" },
-  itemText: { flex: 1, minWidth: 0, fontSize: 14, lineHeight: 19, fontWeight: "500", color: "rgba(255,255,255,0.94)" },
+  itemText: { flex: 1, minWidth: 0, fontSize: 14, lineHeight: 20, fontWeight: "500", color: "rgba(255,255,255,0.94)" },
   itemTextActive: { color: "#FFFFFF", fontWeight: "600" },
   count: { flexShrink: 0, minWidth: 28, maxWidth: 72, minHeight: 22, paddingHorizontal: 8, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(11,19,16,0.55)" },
   countText: { fontSize: 11, lineHeight: 15, fontWeight: "600", color: "#FFFFFF", fontVariant: ["tabular-nums"] },
@@ -296,8 +296,8 @@ const styles = StyleSheet.create({
   footer: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.12)" },
   profile: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10, padding: 6, borderRadius: radius.md },
   avatar: { flexShrink: 0, width: 40, height: 40, borderRadius: radius.md, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  avatarText: { fontSize: 13, lineHeight: 17, fontWeight: "600", color: colors.navy },
-  profileName: { fontSize: 14, lineHeight: 19, fontWeight: "600", color: "#FFFFFF" },
+  avatarText: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.navy },
+  profileName: { fontSize: 14, lineHeight: 20, fontWeight: "600", color: "#FFFFFF" },
   profileRole: { fontSize: 11, lineHeight: 15, color: "rgba(255,255,255,0.7)" },
   logout: { flexShrink: 0, width: 38, height: 38, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(252,165,165,0.12)" },
 });

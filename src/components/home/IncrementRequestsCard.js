@@ -94,10 +94,10 @@ export default function IncrementRequestsCard({ requests, questions, nameFor, na
 
 const styles = StyleSheet.create({
   shareRow: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
-  shareLabel: { fontSize: 12, lineHeight: 16, color: colors.mutedForeground },
-  shareValue: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
+  shareLabel: { fontSize: 12, lineHeight: 17, color: colors.mutedForeground },
+  shareValue: { fontSize: 12, lineHeight: 17, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
   progressRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   amountBox: { flexShrink: 0, maxWidth: "38%", alignItems: "flex-end" },
-  amount: { fontSize: 14, lineHeight: 19, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
-  amountHint: { fontSize: 10, lineHeight: 14, color: colors.mutedForeground, textAlign: "right" },
+  amount: { fontSize: 14, lineHeight: 20, fontWeight: "600", color: colors.foreground, fontVariant: ["tabular-nums"] },
+  amountHint: { fontSize: 11, lineHeight: 15, color: colors.mutedForeground, textAlign: "right" },
 });

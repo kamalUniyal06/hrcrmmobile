@@ -38,13 +38,16 @@ export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 // tight rows and multi-line text spacing varies between fonts. Bold text uses "600", never
 // "700"/"bold": React Native asks Android for that exact weight, and some OEM system fonts
 // (Xiaomi MiSans) ship a 600 face but no 700, so 700 falls back to regular.
+// One scale for the whole app (nothing below 11): title 26 · heading 18 · subheading/body 15 ·
+// small 13 · tiny 11. Line heights give each size room so text never clips or crowds the next line;
+// big text is tightened slightly, small labels are opened up.
 export const type = {
-  title: { fontSize: 24, lineHeight: 30, fontWeight: "600", color: colors.foreground, letterSpacing: -0.4 },
+  title: { fontSize: 26, lineHeight: 32, fontWeight: "600", color: colors.foreground, letterSpacing: -0.5 },
   heading: { fontSize: 18, lineHeight: 24, fontWeight: "600", color: colors.foreground, letterSpacing: -0.2 },
-  subheading: { fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.foreground },
-  body: { fontSize: 15, lineHeight: 21, color: colors.foreground },
-  small: { fontSize: 13, lineHeight: 18, color: colors.mutedForeground },
-  tiny: { fontSize: 11, lineHeight: 15, color: colors.mutedForeground, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
+  subheading: { fontSize: 15, lineHeight: 21, fontWeight: "600", color: colors.foreground, letterSpacing: -0.1 },
+  body: { fontSize: 15, lineHeight: 22, color: colors.foreground },
+  small: { fontSize: 13, lineHeight: 19, color: colors.mutedForeground },
+  tiny: { fontSize: 11, lineHeight: 15, color: colors.mutedForeground, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.6 },
 };
 
 export const shadow = {

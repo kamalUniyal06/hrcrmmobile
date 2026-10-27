@@ -17,6 +17,6 @@ export default function DateBlock({ dateKey: key, tone = "progress", size = 44 }
 
 const styles = StyleSheet.create({
   block: { flexShrink: 0, borderRadius: radius.md, alignItems: "center", justifyContent: "center", paddingVertical: 2, paddingHorizontal: 2 },
-  day: { fontSize: 17, fontWeight: "600", lineHeight: 20 },
-  month: { fontSize: 10, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, lineHeight: 13 },
+  day: { fontSize: 17, fontWeight: "600", lineHeight: 24 },
+  month: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, lineHeight: 15 },
 });

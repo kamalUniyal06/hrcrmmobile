@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   balanceRow: { flexWrap: "wrap", columnGap: 10, rowGap: 10 },
   balance: { flexGrow: 1, flexShrink: 1, flexBasis: 140, minWidth: 0, gap: 2, padding: 14, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card },
   balanceIcon: { width: 38, height: 38, borderRadius: radius.md, alignItems: "center", justifyContent: "center", marginBottom: 8 },
-  balanceValue: { fontSize: 28, lineHeight: 34, fontWeight: "600", letterSpacing: -0.5, color: colors.navy, fontVariant: ["tabular-nums"] },
+  balanceValue: { fontSize: 28, lineHeight: 35, fontWeight: "600", letterSpacing: -0.5, color: colors.navy, fontVariant: ["tabular-nums"] },
   request: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingRight: 12, paddingLeft: 16, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
   requestAccent: { position: "absolute", left: 0, top: 0, bottom: 0, width: 4 },
   requestIcon: { flexShrink: 0, width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },

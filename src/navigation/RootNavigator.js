@@ -52,7 +52,7 @@ const navTheme = {
 const stackOptions = {
   headerTintColor: colors.navy,
   // Screen titles read as headings: bold navy, 20pt.
-  headerTitleStyle: { fontWeight: "600", fontSize: 20, color: colors.navy },
+  headerTitleStyle: { fontWeight: "600", fontSize: 20, lineHeight: 26, color: colors.navy },
   headerStyle: { backgroundColor: colors.background },
   headerShadowVisible: false,
   contentStyle: { backgroundColor: colors.background },
@@ -62,7 +62,7 @@ const stackOptions = {
 // matching the app's other titles (home "HRCRM" bar, banner headings).
 const centeredTitleOptions = {
   headerTitleAlign: "center",
-  headerTitleStyle: { fontWeight: "600", fontSize: 22, color: colors.navy },
+  headerTitleStyle: { fontWeight: "600", fontSize: 22, lineHeight: 29, color: colors.navy },
 };
 
 const Tab = createBottomTabNavigator();

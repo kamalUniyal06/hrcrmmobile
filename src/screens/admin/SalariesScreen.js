@@ -170,7 +170,7 @@ function Figure({ icon, tone = "progress", label, value, highlight = false }) {
         <View style={[styles.figureIcon, { backgroundColor: tones[tone].bg }]}>
           <Ionicons name={icon} size={12} color={tones[tone].fg} />
         </View>
-        <Text style={[type.small, styles.shrink, { fontSize: 12, lineHeight: 16 }]} numberOfLines={2}>{label}</Text>
+        <Text style={[type.small, styles.shrink, { fontSize: 12, lineHeight: 17 }]} numberOfLines={2}>{label}</Text>
       </Row>
       <Text style={[styles.figureValue, highlight && { color: colors.attention }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
         {value}
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   stats: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   wideTile: { minWidth: "100%" },
   monthChip: { alignSelf: "flex-start", flexShrink: 0, maxWidth: "38%" },
-  cardTitle: { fontSize: 16, lineHeight: 22, fontWeight: "600", color: colors.navy },
+  cardTitle: { fontSize: 16, lineHeight: 23, fontWeight: "600", color: colors.navy },
   count: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.mutedForeground },
   shrink: { flexShrink: 1, minWidth: 0 },
   note: { flexDirection: "row", alignItems: "flex-start", gap: 6, padding: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.infoSoft },
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   figures: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing.sm, rowGap: spacing.sm },
   figure: { flexGrow: 1, flexBasis: "30%", minWidth: 92, backgroundColor: colors.background, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, gap: 6 },
   figureIcon: { width: 20, height: 20, borderRadius: 6, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  figureValue: { fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.navy, fontVariant: ["tabular-nums"] },
+  figureValue: { fontSize: 15, lineHeight: 21, fontWeight: "600", color: colors.navy, fontVariant: ["tabular-nums"] },
   footer: { flexWrap: "wrap", columnGap: spacing.sm, rowGap: 4, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   linkWrap: { flexDirection: "row", alignItems: "center", gap: 2, flexShrink: 0, marginLeft: "auto" },
   link: { fontSize: 13, lineHeight: 18, fontWeight: "600", color: colors.primary },
